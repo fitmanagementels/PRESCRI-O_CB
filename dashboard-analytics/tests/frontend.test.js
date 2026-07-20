@@ -57,6 +57,8 @@ assert(scripts.includes('https://wa.me/'));
 assert(!/(?:draggable\s*=|addEventListener\(['"]dragstart|addEventListener\(['"]drop)/.test(index + styles + scripts));
 assert(styles.includes('@media (max-width: 640px)'));
 assert(/min-height:\s*44px/.test(styles));
+assert(styles.includes('.demand-card .stage{display:contents}'), 'No mobile, a etapa deve participar diretamente da grade compacta do cartão.');
+assert(styles.includes('.demand-card .stage .badge{grid-column:3;grid-row:2/4;align-self:center}'), 'O SLA deve ocupar a terceira coluna da faixa operacional no mobile.');
 assert(styles.includes('.help-button'));
 assert(charts.includes('function renderLineChart'));
 assert(charts.includes('function renderBarChart'));
