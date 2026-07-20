@@ -1,0 +1,1744 @@
+<script>
+  (function () {
+    'use strict';
+
+    const SNAPSHOT_KEY = 'prescricoes_resumo_v3';
+    const SNAPSHOT_MAX_AGE = 24 * 60 * 60 * 1000;
+    const DEMAND_DRAFT_KEY = 'prescricoes_anamnese_v2_rascunho';
+    const DEMAND_DRAFT_MAX_AGE = 6 * 60 * 60 * 1000;
+    const DEMAND_WIZARD_TITLE = 'Adicionar demanda';
+    const DEMAND_FIELD_FREQUENCY_LABEL = 'Frequência pretendida';
+
+    const state = {
+      registros: [],
+      profissionais: [],
+      periodos: [],
+      atualizadoEm: '',
+      busca: '',
+      profissional: 'todos',
+      periodo: 'ultimos_45',
+      categoria: 'total',
+      ordenacao: 'recentes',
+      carregando: false,
+      previewPayload: null,
+      noticeTimer: null,
+      modalRegistroId: '',
+      ultimoFoco: null,
+      bootInicio: 0,
+      bootProgresso: 0,
+      bootTimer: null,
+      revelacaoAgendada: false,
+      appRevelado: false,
+      prefetchTimer: null,
+      prefetchEmAndamento: false,
+      carregamentosAnamnese: {},
+      activeView: 'acompanhamento',
+      questionario: null,
+      demandStep: 1,
+      demandDraft: null,
+      demandSubmitting: false,
+    };
+
+    const elements = {
+      bootScreen: document.getElementById('bootScreen'),
+      bootStatus: document.getElementById('bootStatus'),
+      bootProgress: document.getElementById('bootProgress'),
+      bootPercent: document.getElementById('bootPercent'),
+      bootBar: document.querySelector('.boot-bar'),
+      appShell: document.getElementById('appShell'),
+      updatedAt: document.getElementById('updatedAt'),
+      refreshButton: document.getElementById('refreshButton'),
+      notice: document.getElementById('notice'),
+      searchInput: document.getElementById('searchInput'),
+      professionalFilter: document.getElementById('professionalFilter'),
+      periodFilter: document.getElementById('periodFilter'),
+      sortSelect: document.getElementById('sortSelect'),
+      metrics: document.getElementById('metrics'),
+      listTitle: document.getElementById('listTitle'),
+      itemCount: document.getElementById('itemCount'),
+      studentList: document.getElementById('studentList'),
+      prescriptionModal: document.getElementById('prescriptionModal'),
+      modalClose: document.getElementById('modalClose'),
+      modalExpandToggle: document.getElementById('modalExpandToggle'),
+      modalTitle: document.getElementById('modalTitle'),
+      modalSubtitle: document.getElementById('modalSubtitle'),
+      modalContent: document.getElementById('modalContent'),
+      appTabs: Array.prototype.slice.call(document.querySelectorAll('[data-app-view]')),
+      prescriptionsView: document.getElementById('prescriptionsView'),
+      demandView: document.getElementById('demandView'),
+      demandWizard: document.getElementById('demandWizard'),
+      wizardFields: document.getElementById('wizardFields'),
+      wizardReview: document.getElementById('wizardReview'),
+      wizardProgress: document.getElementById('wizardProgress'),
+      wizardDescription: document.getElementById('wizardDescription'),
+      wizardBack: document.getElementById('wizardBack'),
+      wizardDiscard: document.getElementById('wizardDiscard'),
+      wizardNext: document.getElementById('wizardNext'),
+      wizardSubmit: document.getElementById('wizardSubmit'),
+    };
+
+    iniciarTelaInicial();
+    configurarEventos();
+    inicializarAplicativo();
+
+    function iniciarTelaInicial() {
+      state.bootInicio = window.performance && performance.now
+        ? performance.now()
+        : Date.now();
+      atualizarProgressoInicial(6);
+      state.bootTimer = window.setInterval(function () {
+        const atual = state.bootProgresso;
+        const incremento = atual < 55 ? 7 : (atual < 80 ? 3 : 0.7);
+        atualizarProgressoInicial(Math.min(92, atual + incremento));
+      }, 120);
+    }
+
+    function atualizarProgressoInicial(valor) {
+      const progresso = Math.max(0, Math.min(100, Math.round(valor)));
+      state.bootProgresso = progresso;
+      elements.bootProgress.style.width = progresso + '%';
+      elements.bootPercent.textContent = progresso + '%';
+      elements.bootBar.setAttribute('aria-valuenow', String(progresso));
+    }
+
+    function inicializarAplicativo() {
+      const snapshot = carregarSnapshotLocal();
+      if (snapshot) {
+        aplicarPayload(snapshot);
+        revelarAplicativo();
+        definirEstadoBotaoAtualizar(false);
+        carregarDados(false, true);
+        return;
+      }
+      carregarDados(false, false);
+    }
+
+    function configurarEventos() {
+      elements.appTabs.forEach(function (botao) {
+        botao.addEventListener('click', function () { abrirAbaAplicativo(botao.dataset.appView); });
+      });
+      elements.refreshButton.addEventListener('click', function () {
+        carregarDados(true);
+      });
+
+      elements.searchInput.addEventListener('input', function (event) {
+        state.busca = normalizarTexto(event.target.value);
+        renderizarTudo();
+      });
+
+      elements.professionalFilter.addEventListener('change', function (event) {
+        state.profissional = event.target.value;
+        renderizarTudo();
+      });
+
+      elements.periodFilter.addEventListener('change', function (event) {
+        state.periodo = event.target.value;
+        renderizarTudo();
+      });
+
+      elements.sortSelect.addEventListener('change', function (event) {
+        state.ordenacao = event.target.value;
+        renderizarTudo();
+      });
+
+      elements.metrics.addEventListener('click', function (event) {
+        const botao = event.target.closest('[data-category]');
+        if (!botao) {
+          return;
+        }
+        state.categoria = botao.dataset.category || 'total';
+        renderizarTudo();
+      });
+
+      elements.studentList.addEventListener('change', tratarAlteracaoCard);
+      elements.studentList.addEventListener('click', tratarCliqueCard);
+      elements.prescriptionModal.addEventListener('click', function (event) {
+        if (event.target.closest('[data-action="close-modal"]')) {
+          fecharModalPrescricao();
+          return;
+        }
+        if (event.target.closest('[data-action="toggle-sections"]')) {
+          alternarSecoesModal();
+        }
+      });
+
+      elements.modalContent.addEventListener('toggle', function (event) {
+        if (event.target.matches('.anamnesis-section')) {
+          atualizarBotaoSecoesModal();
+        }
+      }, true);
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !elements.prescriptionModal.hidden) {
+          fecharModalPrescricao();
+        }
+      });
+
+      window.addEventListener('offline', function () {
+        mostrarAviso('Sem conexão. Os dados abertos continuam visíveis, mas não será possível salvar.', true, false);
+      });
+      window.addEventListener('online', function () {
+        mostrarAviso('Conexão restaurada.', false, true);
+      });
+
+      elements.demandWizard.addEventListener('input', salvarRascunhoDemanda);
+      elements.demandWizard.addEventListener('change', salvarRascunhoDemanda);
+      elements.demandWizard.addEventListener('click', tratarCliqueSelectCustom);
+      elements.demandWizard.addEventListener('keydown', tratarTecladoSelectCustom);
+      document.addEventListener('click', function (event) {
+        if (!event.target.closest('.custom-select')) fecharSelectsCustom();
+      });
+      elements.wizardBack.addEventListener('click', function () { mudarEtapaDemanda(-1); });
+      elements.wizardNext.addEventListener('click', function () { mudarEtapaDemanda(1); });
+      elements.wizardDiscard.addEventListener('click', descartarRascunhoDemanda);
+      elements.demandWizard.addEventListener('submit', enviarDemandaWizard);
+    }
+
+    function carregarDados(forcarAtualizacao, silencioso) {
+      if (state.carregando) {
+        return;
+      }
+
+      state.carregando = true;
+      definirEstadoBotaoAtualizar(true);
+      if (!forcarAtualizacao && !silencioso) {
+        elements.bootStatus.textContent = 'Sincronizando anamneses';
+      } else if (forcarAtualizacao) {
+        elements.studentList.setAttribute('aria-busy', 'true');
+      }
+
+      const funcao = forcarAtualizacao
+        ? 'atualizarMonitoramentoEObterDados'
+        : 'getDadosPrescricoes';
+
+      executarAppsScript(funcao)
+        .then(function (payload) {
+          aplicarPayload(payload || {});
+          salvarSnapshotLocal(payload || {});
+          revelarAplicativo();
+          agendarPrecarregamentoAnamneses();
+          if (forcarAtualizacao) {
+            const novos = payload && payload.sincronizacao
+              ? Number(payload.sincronizacao.novos || 0)
+              : 0;
+            mostrarAviso(
+              novos > 0
+                ? novos + ' nova(s) anamnese(s) adicionada(s) ao Monitoramento.'
+                : 'Monitoramento atualizado. Nenhuma anamnese nova.',
+              false,
+              true
+            );
+          }
+        })
+        .catch(function (erro) {
+          revelarAplicativo();
+          if (!state.registros.length) {
+            elements.studentList.innerHTML = renderizarErro(
+              'Não foi possível carregar as prescrições.',
+              mensagemErro(erro)
+            );
+          }
+          mostrarAviso(mensagemErro(erro), true, false);
+        })
+        .finally(function () {
+          state.carregando = false;
+          definirEstadoBotaoAtualizar(false);
+          elements.studentList.removeAttribute('aria-busy');
+        });
+    }
+
+    function aplicarPayload(payload) {
+      const respostasEmMemoria = {};
+      state.registros.forEach(function (registro) {
+        if (registro.respostasCarregadas) {
+          respostasEmMemoria[registro.submissionId] = registro.respostas;
+        }
+      });
+
+      state.registros = Array.isArray(payload.registros) ? payload.registros : [];
+      state.registros.forEach(function (registro) {
+        if (respostasEmMemoria[registro.submissionId]) {
+          registro.respostas = respostasEmMemoria[registro.submissionId];
+          registro.respostasCarregadas = true;
+        }
+      });
+      state.profissionais = Array.isArray(payload.profissionais) ? payload.profissionais : [];
+      state.periodos = Array.isArray(payload.periodos) ? payload.periodos : [];
+      state.atualizadoEm = payload.atualizadoEm || '';
+      preencherFiltros();
+      renderizarTudo();
+    }
+
+    function carregarSnapshotLocal() {
+      if (!temAppsScript()) {
+        return null;
+      }
+      try {
+        const snapshot = JSON.parse(window.localStorage.getItem(SNAPSHOT_KEY) || 'null');
+        if (!snapshot || !snapshot.salvoEm || Date.now() - snapshot.salvoEm > SNAPSHOT_MAX_AGE) {
+          return null;
+        }
+        return snapshot.payload || null;
+      } catch (erro) {
+        return null;
+      }
+    }
+
+    function salvarSnapshotLocal(payload) {
+      if (!temAppsScript() || !payload || !Array.isArray(payload.registros)) {
+        return;
+      }
+      try {
+        const resumo = Object.assign({}, payload, {
+          registros: payload.registros.map(function (registro) {
+            return Object.assign({}, registro, {
+              respostas: [],
+              respostasCarregadas: false,
+            });
+          }),
+        });
+        window.localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({
+          salvoEm: Date.now(),
+          payload: resumo,
+        }));
+      } catch (erro) {
+        // O snapshot é apenas uma otimização de abertura.
+      }
+    }
+
+    function revelarAplicativo() {
+      if (state.appRevelado || state.revelacaoAgendada) {
+        return;
+      }
+
+      state.revelacaoAgendada = true;
+      const agora = window.performance && performance.now ? performance.now() : Date.now();
+      const tempoDecorrido = agora - state.bootInicio;
+      const esperaMinima = Math.max(0, 850 - tempoDecorrido);
+
+      window.setTimeout(function () {
+        window.clearInterval(state.bootTimer);
+        elements.bootStatus.textContent = 'Tudo pronto';
+        atualizarProgressoInicial(100);
+        elements.appShell.hidden = false;
+
+        window.setTimeout(function () {
+          elements.bootScreen.classList.add('is-finishing');
+          window.setTimeout(function () {
+            elements.bootScreen.hidden = true;
+            state.appRevelado = true;
+            state.revelacaoAgendada = false;
+          }, 190);
+        }, 120);
+      }, esperaMinima);
+    }
+
+    function definirEstadoBotaoAtualizar(carregando) {
+      elements.refreshButton.disabled = carregando;
+      elements.refreshButton.querySelector('span:last-child').textContent = carregando
+        ? 'Atualizando'
+        : 'Atualizar';
+    }
+
+    function preencherFiltros() {
+      const profissionalAtual = state.profissional;
+      const nomes = state.profissionais.slice().sort(compararTexto);
+      const temSemProfissional = state.registros.some(function (registro) {
+        return !String(registro.profissional || '').trim();
+      });
+
+      let opcoesProfissional = '<option value="todos">Todos os profissionais</option>';
+      if (temSemProfissional) {
+        opcoesProfissional += '<option value="sem_profissional">Sem profissional</option>';
+      }
+      opcoesProfissional += nomes.map(function (nome) {
+        return '<option value="' + escaparAttr(nome) + '">' + escaparHtml(nome) + '</option>';
+      }).join('');
+      elements.professionalFilter.innerHTML = opcoesProfissional;
+
+      const valoresProfissional = Array.from(elements.professionalFilter.options).map(function (opcao) {
+        return opcao.value;
+      });
+      state.profissional = valoresProfissional.indexOf(profissionalAtual) !== -1
+        ? profissionalAtual
+        : 'todos';
+      elements.professionalFilter.value = state.profissional;
+
+      const periodoAtual = state.periodo;
+      let opcoesPeriodo = [
+        '<option value="ultimos_45">Últimos 45 dias</option>',
+        '<option value="geral">Todos</option>',
+      ];
+      opcoesPeriodo = opcoesPeriodo.concat(state.periodos.map(function (periodo) {
+        return '<option value="' + escaparAttr(periodo.valor) + '">'
+          + escaparHtml(periodo.rotulo)
+          + '</option>';
+      }));
+      elements.periodFilter.innerHTML = opcoesPeriodo.join('');
+
+      const valoresPeriodo = Array.from(elements.periodFilter.options).map(function (opcao) {
+        return opcao.value;
+      });
+      state.periodo = valoresPeriodo.indexOf(periodoAtual) !== -1
+        ? periodoAtual
+        : 'ultimos_45';
+      elements.periodFilter.value = state.periodo;
+      elements.updatedAt.textContent = state.atualizadoEm
+        ? 'Prescrições atualizadas em ' + state.atualizadoEm
+        : 'Prescrições carregadas';
+    }
+
+    function renderizarTudo(opcoes) {
+      const base = filtrarBaseRegistros();
+      renderizarMetricas(base);
+      renderizarLista(base, opcoes || {});
+    }
+
+    function filtrarBaseRegistros() {
+      return state.registros.filter(function (registro) {
+        if (!registroNoPeriodo(registro)) {
+          return false;
+        }
+
+        if (state.profissional === 'sem_profissional' && registro.profissional) {
+          return false;
+        }
+        if (
+          state.profissional !== 'todos'
+          && state.profissional !== 'sem_profissional'
+          && registro.profissional !== state.profissional
+        ) {
+          return false;
+        }
+
+        if (state.busca) {
+          const texto = normalizarTexto([
+            registro.aluno,
+            registro.profissional,
+            registro.submissionId,
+          ].join(' '));
+          if (texto.indexOf(state.busca) === -1) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+    }
+
+    function criarQuestionarioPreview() {
+      const campo = function (rotulo, tipo, etapa, obrigatorio, opcoes) {
+        return { rotulo: rotulo, tipo: tipo, etapa: etapa, obrigatorio: obrigatorio !== false, opcoes: opcoes || [] };
+      };
+      return {
+        versao: 'v2', profissionais: ['Elias', 'James', 'Lucas'],
+        etapas: ['Consentimento e responsável', 'Identificação e dados físicos', 'Experiência de treino', 'Objetivo e rotina', 'Dor, assimetrias e limitações', 'Saúde e preferências', 'Revisar e enviar'],
+        campos: {
+          consentimento: campo('Confirmo que minhas respostas serão usadas para avaliar meu perfil e montar uma prescrição de treino personalizada.', 'consentimento', 1), profissional: campo('Nome do profissional', 'profissional', 1),
+          nomeCompleto: campo('Nome completo', 'texto', 2), email: campo('E-mail', 'email', 2), whatsapp: campo('WhatsApp', 'tel', 2), dataNascimento: campo('Data de nascimento', 'data', 2), alturaCm: campo('Altura em centímetros', 'numero', 2), pesoKg: campo('Peso em kg', 'numero', 2),
+          experienciaMusculacao: campo('Qual é sua experiência com musculação?', 'unica', 3, true, ['Nunca treinei', 'Menos de 3 meses', '3 a 12 meses', '1 a 3 anos', 'Mais de 3 anos']), frequenciaUltimos3Meses: campo('Nos últimos 3 meses, quantas vezes por semana você treinou musculação em média?', 'unica', 3, true, ['Não treinei', '1x por semana', '2x por semana', '3x por semana', '4x ou mais']),
+          objetivo: campo('Qual seu objetivo principal agora?', 'unica', 4, true, ['Ganhar massa', 'Emagrecer', 'Força', 'Saúde', 'Estética', 'Performance', 'Voltar a treinar', 'Outro']), frequenciaPretendida: campo(DEMAND_FIELD_FREQUENCY_LABEL + ' (dias/semana)', 'select', 4, true, ['1', '2', '3', '4', '5', '6', '7']), tempoTreino: campo('Quanto tempo você tem por treino?', 'unica', 4, true, ['40 min', '60 min', '75 min', 'Outro']), atividadesExtras: campo('Além da musculação, você faz corrida, cardio, esporte ou aula?', 'texto_longo', 4),
+          dorAtual: campo('Você sente alguma dor ou desconforto hoje que possa interferir no treino?', 'unica', 5, true, ['Não', 'Sim']), localDor: campo('Onde é a dor ou desconforto?', 'texto', 5, false), intensidadeDor: campo('Intensidade da dor de 0 a 10', 'numero', 5, false), movimentosPioramDor: campo('Quais movimentos pioram essa dor ou desconforto?', 'texto_longo', 5, false), assimetria: campo('Você percebe diferença entre o lado direito e esquerdo do corpo?', 'unica', 5, true, ['Não percebo diferença', 'Sim', 'Não sei dizer']), detalhesAssimetria: campo('Se marcou sim, qual lado, qual região e qual diferença sente?', 'texto', 5, false), movimentosIncomodam: campo('Algum movimento costuma incomodar?', 'multipla', 5, true, ['Nenhum', 'Agachar', 'Correr', 'Subir escada', 'Empurrar', 'Puxar', 'Levantar peso do chão', 'Elevar o braço acima da cabeça', 'Outro']), exerciciosEvitados: campo('Existe algum exercício que você não pode fazer, não gosta ou não se sente seguro fazendo?', 'texto_longo', 5),
+          historicoLesoes: campo('Já teve lesão, cirurgia, hérnia, tendinite, luxação, fratura ou problema de coluna?', 'texto_longo', 6), condicaoImportante: campo('Tem alguma doença ou condição importante?', 'texto', 6), medicamentoContinuo: campo('Usa algum medicamento contínuo?', 'texto', 6), sintomasEsforco: campo('Já sentiu dor no peito, desmaio, tontura forte, falta de ar fora do normal ou palpitação durante esforço?', 'unica', 6, true, ['Não', 'Sim']), preferenciaTreino: campo('Que tipo de treino você prefere?', 'unica', 6, true, ['Curto e direto', 'Mais variado', 'Mais pesado', 'Mais guiado', 'Com máquinas', 'Com pesos livres', 'Sem preferência']), observacoes: campo('Tem algo importante sobre seu corpo, rotina ou treino que eu não perguntei?', 'texto_longo', 6),
+        },
+      };
+    }
+
+    function registroNoPeriodo(registro) {
+      if (state.periodo === 'geral') {
+        return true;
+      }
+      if (state.periodo === 'ultimos_45') {
+        const data = dataLocal(registro.dataAnamnese);
+        if (!data) {
+          return false;
+        }
+        const limite = new Date();
+        limite.setHours(0, 0, 0, 0);
+        limite.setDate(limite.getDate() - 45);
+        return data.getTime() >= limite.getTime();
+      }
+      return registro.periodo === state.periodo;
+    }
+
+    function renderizarMetricas(registros) {
+      const totais = {
+        total: registros.length,
+        a_transferir: registros.filter(function (r) { return r.status === 'a_transferir'; }).length,
+        pendente: registros.filter(function (r) { return r.status === 'pendente'; }).length,
+        prescrito: registros.filter(function (r) { return r.status === 'prescrito'; }).length,
+      };
+
+      const metricas = [
+        { chave: 'total', classe: 'total', valor: totais.total, rotulo: 'Total' },
+        { chave: 'a_transferir', classe: 'a-transferir', valor: totais.a_transferir, rotulo: 'A transferir' },
+        { chave: 'pendente', classe: 'pendentes', valor: totais.pendente, rotulo: 'Pendentes' },
+        { chave: 'prescrito', classe: 'prescritos', valor: totais.prescrito, rotulo: 'Prescritos' },
+      ];
+
+      elements.metrics.innerHTML = metricas.map(function (metrica) {
+        const ativo = state.categoria === metrica.chave;
+        return '<button class="metric-card ' + metrica.classe + (ativo ? ' active' : '')
+          + '" type="button" data-category="' + metrica.chave
+          + '" aria-pressed="' + (ativo ? 'true' : 'false') + '">'
+          + '<span class="metric-value">' + metrica.valor + '</span>'
+          + '<span class="metric-label">' + metrica.rotulo + '</span>'
+          + '</button>';
+      }).join('');
+    }
+
+    function renderizarLista(registrosBase, opcoes) {
+      const scrollAtual = opcoes.restaurarScroll ? window.scrollY : null;
+      let registros = registrosBase.filter(function (registro) {
+        return state.categoria === 'total' || registro.status === state.categoria;
+      });
+      registros = ordenarRegistros(registros);
+
+      elements.listTitle.textContent = tituloLista();
+      elements.itemCount.textContent = registros.length + (registros.length === 1 ? ' item' : ' itens');
+
+      if (!registros.length) {
+        elements.studentList.innerHTML = '<div class="empty-state">'
+          + '<strong>Nenhuma prescrição neste filtro.</strong>'
+          + '<span>Altere os filtros ou atualize os dados.</span>'
+          + '</div>';
+        return;
+      }
+
+      elements.studentList.innerHTML = registros.map(renderizarCard).join('');
+
+      const parametrosPreview = !temAppsScript()
+        ? new URLSearchParams(window.location.search)
+        : null;
+      if (parametrosPreview && (parametrosPreview.has('abrir') || parametrosPreview.has('modal'))) {
+        const primeiroCard = elements.studentList.querySelector('.student-card');
+        if (primeiroCard) {
+          primeiroCard.open = true;
+          if (parametrosPreview.has('modal')) {
+            const botaoInformacoes = primeiroCard.querySelector('[data-action="open-info"]');
+            if (botaoInformacoes) {
+              abrirModalPrescricao(primeiroCard.dataset.id, botaoInformacoes);
+              if (parametrosPreview.get('modal') === 'todos') {
+                alternarSecoesModal();
+              }
+            }
+          }
+        }
+      }
+
+      if (opcoes.reabrirId) {
+        const seletor = '.student-card[data-id="' + cssEscape(opcoes.reabrirId) + '"]';
+        const card = elements.studentList.querySelector(seletor);
+        if (card) {
+          card.open = true;
+        }
+      }
+
+      if (scrollAtual !== null) {
+        window.requestAnimationFrame(function () {
+          window.scrollTo(0, scrollAtual);
+        });
+      }
+    }
+
+    function tituloLista() {
+      const titulos = {
+        total: 'Prescrições',
+        a_transferir: 'Anamneses a transferir',
+        pendente: 'Treinos pendentes',
+        prescrito: 'Treinos prescritos',
+      };
+      return titulos[state.categoria] || titulos.total;
+    }
+
+    function ordenarRegistros(registros) {
+      return registros.slice().sort(function (a, b) {
+        if (state.ordenacao === 'az') {
+          return compararTexto(a.aluno, b.aluno);
+        }
+        const tempoA = tempoRegistro(a);
+        const tempoB = tempoRegistro(b);
+        return state.ordenacao === 'antigos' ? tempoA - tempoB : tempoB - tempoA;
+      });
+    }
+
+    function renderizarCard(registro) {
+      const statusClasse = registro.status === 'prescrito'
+        ? 'status-prescrito'
+        : (registro.status === 'pendente' ? 'status-pendente' : 'status-transferir');
+      const monitoramento = registro.monitoramento || {};
+      const data = monitoramento.dataPrescricao || '';
+      const profissional = registro.profissional || 'Não informado';
+      const dias = registro.diasProcesso === null || registro.diasProcesso === undefined
+        ? 'Sem data'
+        : registro.diasProcesso + ' dias';
+
+      return '<details class="student-card ' + statusClasse + '" data-id="' + escaparAttr(registro.submissionId) + '">'
+        + '<summary class="student-summary">'
+          + '<span class="student-main">'
+            + '<span class="student-name">' + escaparHtml(registro.aluno || 'Aluno não informado') + '</span>'
+            + '<span class="student-subtitle status-line">'
+              + '<span>' + escaparHtml(profissional) + '</span>'
+              + '<span aria-hidden="true">·</span>'
+              + '<span>' + escaparHtml(dataCurta(registro.dataAnamnese)) + '</span>'
+              + '<span class="status-name">' + escaparHtml(registro.statusLabel || '') + '</span>'
+            + '</span>'
+          + '</span>'
+          + '<span class="days-pill">' + escaparHtml(dias) + '</span>'
+          + '<span class="card-chevron" aria-hidden="true">›</span>'
+        + '</summary>'
+        + '<div class="card-body">'
+          + '<section class="process-panel" aria-label="Processo de prescrição">'
+            + '<h3 class="section-kicker">Processo de prescrição</h3>'
+            + '<div class="professional-box">'
+              + '<span>Profissional responsável</span>'
+              + '<strong>' + escaparHtml(profissional) + '</strong>'
+            + '</div>'
+            + '<div class="process-grid">'
+              + renderizarToggle(
+                'transferida',
+                'Anamnese transferida',
+                'Registrada no sistema de prescrição',
+                !!monitoramento.anamneseTransferida
+              )
+              + renderizarToggle(
+                'prescrito',
+                'Treino prescrito',
+                'Prescrição concluída pelo profissional',
+                !!monitoramento.treinoPrescrito
+              )
+            + '</div>'
+            + '<div class="date-field">'
+              + '<label class="process-label" for="date-' + escaparAttr(registro.submissionId) + '">Data da prescrição</label>'
+              + '<input class="date-input" id="date-' + escaparAttr(registro.submissionId)
+              + '" data-role="data" type="date" value="' + escaparAttr(data)
+              + '"' + (monitoramento.treinoPrescrito ? '' : ' disabled') + '>'
+            + '</div>'
+            + '<div class="card-actions">'
+              + '<span class="save-state" aria-live="polite"></span>'
+              + '<button class="save-button" data-action="save" type="button">Salvar</button>'
+            + '</div>'
+            + '<button class="prescription-info-button" data-action="open-info" type="button">'
+              + '<span>Informações para prescrição</span>'
+              + '<span aria-hidden="true">↗</span>'
+            + '</button>'
+          + '</section>'
+        + '</div>'
+      + '</details>';
+    }
+
+    function renderizarToggle(papel, titulo, ajuda, marcado) {
+      return '<label class="toggle-control">'
+        + '<input data-role="' + papel + '" type="checkbox"' + (marcado ? ' checked' : '') + '>'
+        + '<span class="toggle-visual" aria-hidden="true"></span>'
+        + '<span class="toggle-text">'
+          + '<strong>' + titulo + '</strong>'
+          + '<small>' + ajuda + '</small>'
+        + '</span>'
+      + '</label>';
+    }
+
+    function renderizarAnamnese(respostas) {
+      const grupos = agruparRespostas(respostas);
+      const ordem = [
+        'identificacao',
+        'perfil_rotina',
+        'dores_saude',
+        'restricoes',
+        'preferencias',
+      ];
+      const rotulos = {
+        identificacao: 'Identificação',
+        perfil_rotina: 'Perfil físico, objetivo e rotina',
+        dores_saude: 'Dores, lesões e condições de saúde',
+        restricoes: 'Restrições e movimentos',
+        preferencias: 'Preferências e observações',
+      };
+
+      const html = ordem.map(function (chave) {
+        const grupo = grupos[chave];
+        if (!grupo || (!grupo.itens.length && !Object.keys(grupo.chips).length)) {
+          return '';
+        }
+
+        const conteudo = grupo.itens.map(renderizarResposta).join('')
+          + Object.keys(grupo.chips).map(function (pergunta) {
+            return renderizarChips(pergunta, grupo.chips[pergunta]);
+          }).join('');
+
+        return '<details class="anamnesis-section"' + (chave === 'perfil_rotina' ? ' open' : '') + '>'
+          + '<summary class="anamnesis-title">' + escaparHtml(rotulos[chave]) + '</summary>'
+          + '<div class="answer-list">' + conteudo + '</div>'
+          + '</details>';
+      }).join('');
+
+      return html || '<div class="empty-state">Nenhuma resposta disponível para esta anamnese.</div>';
+    }
+
+    function agruparRespostas(respostas) {
+      const grupos = {};
+      respostas.forEach(function (resposta) {
+        if (!resposta || !resposta.campo || valorVazio(resposta.valor)) {
+          return;
+        }
+        if (normalizarTexto(resposta.campo).indexOf('consentimento') !== -1) {
+          return;
+        }
+        if (resposta.tipo === 'booleano' && resposta.valor === false) {
+          return;
+        }
+
+        const grupoChave = categoriaCampo(resposta.campo);
+        if (!grupos[grupoChave]) {
+          grupos[grupoChave] = { itens: [], chips: {} };
+        }
+
+        const opcao = extrairOpcaoCampo(resposta.campo);
+        if (resposta.tipo === 'booleano' && resposta.valor === true && opcao) {
+          if (!grupos[grupoChave].chips[opcao.pergunta]) {
+            grupos[grupoChave].chips[opcao.pergunta] = [];
+          }
+          grupos[grupoChave].chips[opcao.pergunta].push(opcao.opcao);
+          return;
+        }
+
+        grupos[grupoChave].itens.push({
+          campo: resposta.campo,
+          valor: resposta.tipo === 'booleano'
+            ? 'Sim'
+            : formatarValorAnamnese(resposta.valor, resposta.tipo),
+        });
+      });
+      return grupos;
+    }
+
+    function renderizarResposta(resposta) {
+      const valor = String(resposta.valor);
+      const classe = valor.length > 120 ? ' answer-wide' : '';
+      return '<div class="answer-item' + classe + '">'
+        + '<span class="answer-label">' + escaparHtml(resposta.campo) + '</span>'
+        + '<span class="answer-value">' + escaparHtml(valor) + '</span>'
+        + '</div>';
+    }
+
+    function renderizarChips(pergunta, opcoes) {
+      return '<div class="answer-item answer-wide">'
+        + '<span class="answer-label">' + escaparHtml(pergunta) + '</span>'
+        + '<div class="chips">'
+          + opcoes.map(function (opcao) {
+            return '<span class="chip">' + escaparHtml(opcao) + '</span>';
+          }).join('')
+        + '</div>'
+      + '</div>';
+    }
+
+    function categoriaCampo(campo) {
+      const texto = normalizarTexto(campo);
+
+      if (
+        contemAlgum(texto, [
+          'email', 'whatsapp', 'consentimento', 'data de nascimento',
+          'altura', 'peso',
+        ])
+      ) {
+        return 'identificacao';
+      }
+
+      if (contemAlgum(texto, ['experiencia com musculacao', 'ultimos 3 meses'])) {
+        return 'perfil_rotina';
+      }
+
+      if (
+        contemAlgum(texto, [
+          'objetivo principal', 'dias por semana', 'tempo voce tem',
+          'alem da musculacao',
+        ])
+      ) {
+        return 'perfil_rotina';
+      }
+
+      if (
+        contemAlgum(texto, [
+          'dor ou desconforto', 'onde e a dor', 'intensidade da dor',
+          'movimentos pioram', 'diferenca entre o lado', 'qual lado',
+        ])
+      ) {
+        return 'dores_saude';
+      }
+
+      if (
+        contemAlgum(texto, [
+          'lesao', 'cirurgia', 'hernia', 'doenca', 'condicao importante',
+          'medicamento', 'dor no peito', 'desmaio', 'palpitacao',
+        ])
+      ) {
+        return 'dores_saude';
+      }
+
+      if (
+        contemAlgum(texto, [
+          'exercicio que voce nao pode', 'nao se sente seguro',
+          'movimento costuma incomodar',
+        ])
+      ) {
+        return 'restricoes';
+      }
+
+      return 'preferencias';
+    }
+
+    function formatarValorAnamnese(valor, tipo) {
+      if (tipo !== 'data') {
+        return valor;
+      }
+
+      const texto = String(valor || '').trim();
+      const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/);
+      if (iso) {
+        return iso[3] + '/' + iso[2] + '/' + iso[1];
+      }
+
+      const brasileiro = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (brasileiro) {
+        return pad(brasileiro[1]) + '/' + pad(brasileiro[2]) + '/' + brasileiro[3];
+      }
+      return texto;
+    }
+
+    function extrairOpcaoCampo(campo) {
+      const partes = String(campo || '').match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+      if (!partes) {
+        return null;
+      }
+      return {
+        pergunta: partes[1].trim(),
+        opcao: partes[2].trim(),
+      };
+    }
+
+    function tratarAlteracaoCard(event) {
+      const papel = event.target.dataset.role;
+      if (!papel) {
+        return;
+      }
+
+      const card = event.target.closest('.student-card');
+      if (!card) {
+        return;
+      }
+
+      const transferida = card.querySelector('[data-role="transferida"]');
+      const prescrito = card.querySelector('[data-role="prescrito"]');
+      const data = card.querySelector('[data-role="data"]');
+      const estado = card.querySelector('.save-state');
+
+      if (papel === 'prescrito') {
+        if (prescrito.checked && !transferida.checked) {
+          transferida.checked = true;
+          definirEstadoCard(estado, 'Transferência marcada junto com a prescrição.', '');
+        }
+
+        if (!prescrito.checked && data.value) {
+          const confirmar = window.confirm(
+            'Desmarcar o treino prescrito removerá a data da prescrição. Continuar?'
+          );
+          if (!confirmar) {
+            prescrito.checked = true;
+          } else {
+            data.value = '';
+          }
+        }
+        data.disabled = !prescrito.checked;
+      }
+
+      definirEstadoCard(estado, estado.textContent, '');
+    }
+
+    function tratarCliqueCard(event) {
+      const botaoInformacoes = event.target.closest('[data-action="open-info"]');
+      if (botaoInformacoes) {
+        const cardInformacoes = botaoInformacoes.closest('.student-card');
+        if (cardInformacoes) {
+          abrirModalPrescricao(cardInformacoes.dataset.id, botaoInformacoes);
+        }
+        return;
+      }
+
+      const botao = event.target.closest('[data-action="save"]');
+      if (!botao) {
+        return;
+      }
+
+      const card = botao.closest('.student-card');
+      if (!card) {
+        return;
+      }
+      salvarCard(card, botao);
+    }
+
+    function abrirModalPrescricao(submissionId, elementoFoco) {
+      const registro = state.registros.find(function (item) {
+        return item.submissionId === submissionId;
+      });
+      if (!registro) {
+        mostrarAviso('Não foi possível localizar as informações desta anamnese.', true, true);
+        return;
+      }
+
+      state.modalRegistroId = submissionId;
+      state.ultimoFoco = elementoFoco || document.activeElement;
+      elements.modalTitle.textContent = registro.aluno || 'Aluno não informado';
+      elements.modalSubtitle.textContent = [
+        dataCurta(registro.dataAnamnese),
+        registro.profissional || 'Profissional não informado',
+      ].join(' · ');
+      elements.prescriptionModal.hidden = false;
+      document.body.classList.add('modal-open');
+      elements.modalContent.scrollTop = 0;
+      if (registro.respostasCarregadas) {
+        renderizarConteudoModal(registro);
+      } else {
+        elements.modalExpandToggle.disabled = true;
+        elements.modalContent.innerHTML = '<div class="modal-loading" aria-live="polite">'
+          + '<span class="loading-spinner" aria-hidden="true"></span>'
+          + '<strong>Carregando anamnese</strong>'
+          + '</div>';
+        carregarRespostasRegistro(registro)
+          .then(function () {
+            if (state.modalRegistroId === submissionId) {
+              renderizarConteudoModal(registro);
+            }
+          })
+          .catch(function (erro) {
+            if (state.modalRegistroId === submissionId) {
+              elements.modalContent.innerHTML = renderizarErro(
+                'Não foi possível carregar esta anamnese.',
+                mensagemErro(erro)
+              );
+            }
+          });
+      }
+      window.requestAnimationFrame(function () {
+        elements.prescriptionModal.classList.add('is-visible');
+        elements.modalClose.focus();
+      });
+    }
+
+    function carregarRespostasRegistro(registro) {
+      if (registro.respostasCarregadas) {
+        return Promise.resolve(registro.respostas || []);
+      }
+
+      const id = registro.submissionId;
+      if (state.carregamentosAnamnese[id]) {
+        return state.carregamentosAnamnese[id];
+      }
+
+      const carregamento = executarAppsScript('getRespostasAnamnese', id)
+        .then(function (respostas) {
+          registro.respostas = Array.isArray(respostas) ? respostas : [];
+          registro.respostasCarregadas = true;
+          return registro.respostas;
+        })
+        .finally(function () {
+          delete state.carregamentosAnamnese[id];
+        });
+
+      state.carregamentosAnamnese[id] = carregamento;
+      return carregamento;
+    }
+
+    function agendarPrecarregamentoAnamneses() {
+      window.clearTimeout(state.prefetchTimer);
+      if (state.prefetchEmAndamento || !navigator.onLine) {
+        return;
+      }
+
+      state.prefetchTimer = window.setTimeout(function () {
+        if (document.hidden || !elements.prescriptionModal.hidden) {
+          agendarPrecarregamentoAnamneses();
+          return;
+        }
+
+        const candidatos = ordenarRegistros(filtrarBaseRegistros())
+          .filter(function (registro) {
+            return !registro.respostasCarregadas
+              && !state.carregamentosAnamnese[registro.submissionId];
+          })
+          .slice(0, 10);
+
+        if (!candidatos.length) {
+          return;
+        }
+
+        const ids = candidatos.map(function (registro) {
+          return registro.submissionId;
+        });
+        state.prefetchEmAndamento = true;
+
+        const lote = executarAppsScript('getRespostasAnamneses', ids)
+          .then(function (respostasPorId) {
+            candidatos.forEach(function (registro) {
+              const respostas = respostasPorId && respostasPorId[registro.submissionId];
+              if (Array.isArray(respostas)) {
+                registro.respostas = respostas;
+                registro.respostasCarregadas = true;
+              }
+            });
+            return respostasPorId || {};
+          })
+          .finally(function () {
+            state.prefetchEmAndamento = false;
+            ids.forEach(function (id) {
+              delete state.carregamentosAnamnese[id];
+            });
+          });
+
+        candidatos.forEach(function (registro) {
+          state.carregamentosAnamnese[registro.submissionId] = lote.then(function () {
+            return registro.respostas || [];
+          });
+        });
+      }, 1200);
+    }
+
+    function renderizarConteudoModal(registro) {
+      elements.modalContent.innerHTML = '<div class="modal-section-heading">Anamnese</div>'
+        + renderizarAnamnese(registro.respostas || []);
+      elements.modalContent.scrollTop = 0;
+      elements.modalExpandToggle.disabled = false;
+      atualizarBotaoSecoesModal();
+    }
+
+    function fecharModalPrescricao() {
+      if (elements.prescriptionModal.hidden) {
+        return;
+      }
+      elements.prescriptionModal.classList.remove('is-visible');
+      elements.prescriptionModal.hidden = true;
+      document.body.classList.remove('modal-open');
+      state.modalRegistroId = '';
+      if (state.ultimoFoco && typeof state.ultimoFoco.focus === 'function') {
+        state.ultimoFoco.focus();
+      }
+      state.ultimoFoco = null;
+    }
+
+    function alternarSecoesModal() {
+      const secoes = Array.from(elements.modalContent.querySelectorAll('.anamnesis-section'));
+      if (!secoes.length) {
+        return;
+      }
+      const expandir = secoes.some(function (secao) { return !secao.open; });
+      secoes.forEach(function (secao) {
+        secao.open = expandir;
+      });
+      atualizarBotaoSecoesModal();
+    }
+
+    function atualizarBotaoSecoesModal() {
+      const secoes = Array.from(elements.modalContent.querySelectorAll('.anamnesis-section'));
+      const todasAbertas = secoes.length > 0 && secoes.every(function (secao) {
+        return secao.open;
+      });
+      const acao = todasAbertas ? 'Recolher todos os blocos' : 'Expandir todos os blocos';
+      elements.modalExpandToggle.setAttribute('aria-label', acao);
+      elements.modalExpandToggle.setAttribute('title', acao);
+      elements.modalExpandToggle.classList.toggle('all-open', todasAbertas);
+      elements.modalExpandToggle.querySelector('span').textContent = todasAbertas ? '↥' : '↕';
+    }
+
+    function salvarCard(card, botao) {
+      const id = card.dataset.id;
+      const transferida = card.querySelector('[data-role="transferida"]').checked;
+      const prescrito = card.querySelector('[data-role="prescrito"]').checked;
+      const dataInput = card.querySelector('[data-role="data"]');
+      const data = dataInput.value;
+      const estado = card.querySelector('.save-state');
+
+      if (prescrito && !data) {
+        dataInput.focus();
+        definirEstadoCard(estado, 'Escolha a data da prescrição.', 'error');
+        return;
+      }
+
+      botao.disabled = true;
+      botao.textContent = 'Salvando';
+      definirEstadoCard(estado, '', '');
+
+      executarAppsScript(
+        'salvarMonitoramentoPrescricao',
+        id,
+        transferida,
+        prescrito,
+        data
+      )
+        .then(function (registroAtualizado) {
+          atualizarRegistroLocal(registroAtualizado);
+          renderizarTudo({
+            reabrirId: id,
+            restaurarScroll: true,
+          });
+          const cardAtualizado = elements.studentList.querySelector(
+            '.student-card[data-id="' + cssEscape(id) + '"]'
+          );
+          if (cardAtualizado) {
+            definirEstadoCard(
+              cardAtualizado.querySelector('.save-state'),
+              'Alterações salvas.',
+              'success'
+            );
+          }
+          mostrarAviso('Prescrição de ' + (registroAtualizado.aluno || 'aluno') + ' atualizada.', false, true);
+        })
+        .catch(function (erro) {
+          botao.disabled = false;
+          botao.textContent = 'Salvar';
+          definirEstadoCard(estado, mensagemErro(erro), 'error');
+        });
+    }
+
+    function atualizarRegistroLocal(registroAtualizado) {
+      const indice = state.registros.findIndex(function (registro) {
+        return registro.submissionId === registroAtualizado.submissionId;
+      });
+      if (indice === -1) {
+        state.registros.push(registroAtualizado);
+      } else {
+        const anterior = state.registros[indice];
+        if (anterior.respostasCarregadas && !registroAtualizado.respostasCarregadas) {
+          registroAtualizado.respostas = anterior.respostas;
+          registroAtualizado.respostasCarregadas = true;
+        }
+        state.registros[indice] = registroAtualizado;
+      }
+      salvarSnapshotLocal({
+        registros: state.registros,
+        profissionais: state.profissionais,
+        periodos: state.periodos,
+        atualizadoEm: state.atualizadoEm,
+      });
+    }
+
+    function definirEstadoCard(elemento, mensagem, classe) {
+      if (!elemento) {
+        return;
+      }
+      elemento.textContent = mensagem || '';
+      elemento.className = 'save-state' + (classe ? ' ' + classe : '');
+    }
+
+    function mostrarAviso(mensagem, erro, temporario) {
+      window.clearTimeout(state.noticeTimer);
+      elements.notice.textContent = mensagem || '';
+      elements.notice.className = 'notice' + (erro ? ' error' : '');
+      elements.notice.hidden = !mensagem;
+
+      if (mensagem && temporario) {
+        state.noticeTimer = window.setTimeout(function () {
+          elements.notice.hidden = true;
+        }, 4200);
+      }
+    }
+
+    function abrirAbaAplicativo(nome) {
+      const novaAba = nome === 'nova-demanda' ? 'nova-demanda' : 'acompanhamento';
+      state.activeView = novaAba;
+      elements.prescriptionsView.hidden = novaAba !== 'acompanhamento';
+      elements.demandView.hidden = novaAba !== 'nova-demanda';
+      elements.appTabs.forEach(function (botao) {
+        const ativa = botao.dataset.appView === novaAba;
+        botao.classList.toggle('is-active', ativa);
+        botao.setAttribute('aria-selected', ativa ? 'true' : 'false');
+      });
+      if (novaAba === 'nova-demanda') carregarQuestionarioDemanda();
+    }
+
+    function carregarQuestionarioDemanda() {
+      if (state.questionario) {
+        renderizarWizardDemanda();
+        return Promise.resolve();
+      }
+      elements.wizardDescription.textContent = 'Preparando perguntas';
+      return executarAppsScript('getQuestionarioPwaPrescricao')
+        .then(function (questionario) {
+          state.questionario = questionario || criarQuestionarioPreview();
+          state.demandDraft = carregarRascunhoDemanda() || criarRascunhoDemanda();
+          state.demandStep = state.demandDraft.etapa || 1;
+          renderizarWizardDemanda();
+        })
+        .catch(function (erro) {
+          elements.wizardFields.innerHTML = renderizarErro('Não foi possível abrir a anamnese', mensagemErro(erro));
+        });
+    }
+
+    function criarRascunhoDemanda() {
+      return { versao: state.questionario ? state.questionario.versao : 'v2', salvoEm: Date.now(), etapa: 1, tentativaId: gerarTentativaDemanda(), respostas: {} };
+    }
+
+    function gerarTentativaDemanda() {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+      return 'tentativa-' + Date.now() + '-' + Math.random().toString(36).slice(2, 12);
+    }
+
+    function carregarRascunhoDemanda() {
+      try {
+        const texto = window.localStorage.getItem(DEMAND_DRAFT_KEY);
+        const rascunho = texto ? JSON.parse(texto) : null;
+        if (!rascunho || !state.questionario || rascunho.versao !== state.questionario.versao || !rascunho.salvoEm || Date.now() - rascunho.salvoEm > DEMAND_DRAFT_MAX_AGE) {
+          window.localStorage.removeItem(DEMAND_DRAFT_KEY);
+          return null;
+        }
+        return rascunho;
+      } catch (erro) {
+        return null;
+      }
+    }
+
+    function salvarRascunhoDemanda() {
+      if (!state.questionario || state.demandSubmitting) return;
+      state.demandDraft = state.demandDraft || criarRascunhoDemanda();
+      state.demandDraft.respostas = capturarValoresDemanda();
+      state.demandDraft.etapa = state.demandStep;
+      state.demandDraft.salvoEm = Date.now();
+      try { window.localStorage.setItem(DEMAND_DRAFT_KEY, JSON.stringify(state.demandDraft)); } catch (erro) {}
+    }
+
+    function descartarRascunhoDemanda() {
+      window.localStorage.removeItem(DEMAND_DRAFT_KEY);
+      state.demandDraft = criarRascunhoDemanda();
+      state.demandStep = 1;
+      renderizarWizardDemanda();
+      mostrarAviso('Rascunho descartado.', false, true);
+    }
+
+    function camposDaEtapaDemanda(etapa) {
+      const campos = state.questionario && state.questionario.campos ? state.questionario.campos : {};
+      return Object.keys(campos).filter(function (chave) {
+        const campo = campos[chave];
+        return campo.etapa === etapa;
+      });
+    }
+
+    function renderizarWizardDemanda() {
+      const etapas = state.questionario.etapas || [];
+      const etapa = Math.min(Math.max(state.demandStep, 1), etapas.length || 7);
+      state.demandStep = etapa;
+      elements.wizardDescription.textContent = 'Etapa ' + etapa + ' de ' + etapas.length + ' — ' + (etapas[etapa - 1] || 'Revisão');
+      elements.wizardProgress.style.width = (etapa / etapas.length * 100) + '%';
+      elements.wizardProgress.setAttribute('aria-valuenow', String(etapa));
+      elements.wizardBack.hidden = etapa === 1;
+      elements.wizardNext.hidden = etapa === etapas.length;
+      elements.wizardSubmit.hidden = etapa !== etapas.length;
+      const revisar = etapa === etapas.length;
+      const campos = revisar ? [] : camposDaEtapaDemanda(etapa);
+      elements.wizardFields.hidden = revisar;
+      elements.wizardFields.innerHTML = campos.map(renderizarCampoDemanda).join('');
+      elements.wizardReview.hidden = !revisar;
+      elements.wizardReview.classList.toggle('wizard-review-step', revisar);
+      if (revisar) elements.wizardReview.innerHTML = renderizarRevisaoDemanda();
+    }
+
+    function renderizarCampoDemanda(chave) {
+      const campo = state.questionario.campos[chave];
+      const respostas = state.demandDraft.respostas || {};
+      const valor = respostas[chave];
+      const obrigatorio = campo.obrigatorio ? ' required' : '';
+      const id = 'demand_' + chave;
+      if (campo.tipo === 'consentimento') {
+        return '<label class="wizard-consent" for="' + id + '"><input id="' + id + '" name="' + chave + '" type="checkbox"' + (valor ? ' checked' : '') + obrigatorio + '><span>' + escaparHtml(campo.rotulo) + '</span></label>';
+      }
+      if (campo.tipo === 'unica' || campo.tipo === 'profissional') {
+        const opcoes = campo.tipo === 'profissional' ? (state.questionario.profissionais || []) : campo.opcoes;
+        return '<fieldset class="wizard-field"><legend>' + escaparHtml(campo.rotulo) + (campo.obrigatorio ? ' <em>*</em>' : '') + '</legend>'
+          + opcoes.map(function (opcao) { return '<label class="wizard-choice"><input name="' + chave + '" type="radio" value="' + escaparAttr(opcao) + '"' + (valor === opcao ? ' checked' : '') + obrigatorio + '><span>' + escaparHtml(opcao) + '</span></label>'; }).join('') + '</fieldset>';
+      }
+      if (campo.tipo === 'multipla') {
+        const marcados = Array.isArray(valor) ? valor : [];
+        return '<fieldset class="wizard-field"><legend>' + escaparHtml(campo.rotulo) + ' <em>*</em></legend>'
+          + campo.opcoes.map(function (opcao) { return '<label class="wizard-choice"><input name="' + chave + '" type="checkbox" value="' + escaparAttr(opcao) + '"' + (marcados.indexOf(opcao) !== -1 ? ' checked' : '') + '><span>' + escaparHtml(opcao) + '</span></label>'; }).join('') + '</fieldset>';
+      }
+      if (campo.tipo === 'select') {
+        const listaId = id + '_opcoes';
+        return '<div class="wizard-field custom-select" data-custom-select><label id="' + id + '_label">' + escaparHtml(campo.rotulo) + ' <em>*</em></label>'
+          + '<input id="' + id + '" name="' + chave + '" type="hidden" value="' + escaparAttr(valor || '') + '">'
+          + '<button class="custom-select-trigger" type="button" data-custom-select-toggle role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-controls="' + listaId + '" aria-labelledby="' + id + '_label ' + id + '_value">'
+          + '<span id="' + id + '_value">' + escaparHtml(valor || 'Selecione') + '</span><span class="custom-select-chevron" aria-hidden="true">⌄</span></button>'
+          + '<ul class="custom-select-menu" id="' + listaId + '" role="listbox" aria-labelledby="' + id + '_label" hidden>'
+          + campo.opcoes.map(function (opcao) { return '<li><button type="button" role="option" data-custom-select-option data-value="' + escaparAttr(opcao) + '" aria-selected="' + (valor === opcao ? 'true' : 'false') + '">' + escaparHtml(opcao) + '</button></li>'; }).join('')
+          + '</ul></div>';
+      }
+      const tag = campo.tipo === 'texto_longo' ? 'textarea' : 'input';
+      const tipo = campo.tipo === 'data' ? 'date' : (campo.tipo === 'numero' ? 'number' : (campo.tipo === 'email' ? 'email' : (campo.tipo === 'tel' ? 'tel' : 'text')));
+      const controle = tag === 'textarea'
+        ? '<textarea id="' + id + '" name="' + chave + '" rows="4"' + obrigatorio + '>' + escaparHtml(valor || '') + '</textarea>'
+        : '<input id="' + id + '" name="' + chave + '" type="' + tipo + '" value="' + escaparAttr(valor || '') + '"' + (tipo === 'number' ? ' inputmode="decimal"' : '') + obrigatorio + '>';
+      return '<div class="wizard-field"><label for="' + id + '">' + escaparHtml(campo.rotulo) + (campo.obrigatorio ? ' <em>*</em>' : '') + '</label>' + controle + '</div>';
+    }
+
+    function fecharSelectsCustom() {
+      Array.prototype.slice.call(elements.demandWizard.querySelectorAll('.custom-select.is-open')).forEach(function (seletor) {
+        seletor.classList.remove('is-open');
+        seletor.querySelector('.custom-select-menu').hidden = true;
+        seletor.querySelector('[data-custom-select-toggle]').setAttribute('aria-expanded', 'false');
+      });
+    }
+
+    function abrirSelectCustom(seletor) {
+      fecharSelectsCustom();
+      seletor.classList.add('is-open');
+      seletor.querySelector('.custom-select-menu').hidden = false;
+      seletor.querySelector('[data-custom-select-toggle]').setAttribute('aria-expanded', 'true');
+    }
+
+    function selecionarOpcaoSelectCustom(opcao) {
+      const seletor = opcao.closest('.custom-select');
+      const valor = opcao.dataset.value || '';
+      seletor.querySelector('input[type="hidden"]').value = valor;
+      seletor.querySelector('.custom-select-trigger span:first-child').textContent = valor || 'Selecione';
+      Array.prototype.slice.call(seletor.querySelectorAll('[data-custom-select-option]')).forEach(function (item) {
+        item.setAttribute('aria-selected', item === opcao ? 'true' : 'false');
+      });
+      fecharSelectsCustom();
+      salvarRascunhoDemanda();
+    }
+
+    function tratarCliqueSelectCustom(event) {
+      const alternador = event.target.closest('[data-custom-select-toggle]');
+      if (alternador) {
+        event.preventDefault();
+        event.stopPropagation();
+        const seletor = alternador.closest('.custom-select');
+        if (seletor.classList.contains('is-open')) fecharSelectsCustom();
+        else abrirSelectCustom(seletor);
+        return;
+      }
+      const opcao = event.target.closest('[data-custom-select-option]');
+      if (opcao) {
+        event.preventDefault();
+        selecionarOpcaoSelectCustom(opcao);
+      }
+    }
+
+    function tratarTecladoSelectCustom(event) {
+      const alternador = event.target.closest('[data-custom-select-toggle]');
+      const opcao = event.target.closest('[data-custom-select-option]');
+      const teclasAbrir = ['ArrowDown', 'ArrowUp', 'Enter', ' '];
+      if (alternador && teclasAbrir.indexOf(event.key) !== -1) {
+        event.preventDefault();
+        const seletor = alternador.closest('.custom-select');
+        abrirSelectCustom(seletor);
+        const opcoes = Array.prototype.slice.call(seletor.querySelectorAll('[data-custom-select-option]'));
+        const selecionada = seletor.querySelector('[aria-selected="true"]');
+        const indice = selecionada ? opcoes.indexOf(selecionada) : 0;
+        (opcoes[event.key === 'ArrowUp' ? Math.max(0, indice - 1) : indice] || opcoes[0]).focus();
+        return;
+      }
+      if (alternador && event.key === 'Escape') {
+        fecharSelectsCustom();
+        return;
+      }
+      if (!opcao) return;
+      const seletor = opcao.closest('.custom-select');
+      const opcoes = Array.prototype.slice.call(seletor.querySelectorAll('[data-custom-select-option]'));
+      const indice = opcoes.indexOf(opcao);
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        fecharSelectsCustom();
+        seletor.querySelector('[data-custom-select-toggle]').focus();
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        selecionarOpcaoSelectCustom(opcao);
+        seletor.querySelector('[data-custom-select-toggle]').focus();
+      } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End') {
+        event.preventDefault();
+        const proximo = event.key === 'Home' ? 0 : (event.key === 'End' ? opcoes.length - 1 : Math.max(0, Math.min(opcoes.length - 1, indice + (event.key === 'ArrowDown' ? 1 : -1))));
+        opcoes[proximo].focus();
+      }
+    }
+
+    function capturarValoresDemanda() {
+      const respostas = Object.assign({}, state.demandDraft && state.demandDraft.respostas || {});
+      if (!state.questionario) return respostas;
+      Object.keys(state.questionario.campos).forEach(function (chave) {
+        const campo = state.questionario.campos[chave];
+        const controles = elements.demandWizard.querySelectorAll('[name="' + cssEscape(chave) + '"]');
+        if (!controles.length) return;
+        if (campo.tipo === 'multipla') respostas[chave] = Array.prototype.slice.call(controles).filter(function (input) { return input.checked; }).map(function (input) { return input.value; });
+        else if (campo.tipo === 'unica' || campo.tipo === 'profissional') {
+          const marcado = Array.prototype.slice.call(controles).find(function (input) { return input.checked; });
+          respostas[chave] = marcado ? marcado.value : '';
+        } else if (campo.tipo === 'consentimento') respostas[chave] = !!controles[0].checked;
+        else respostas[chave] = controles[0].value;
+      });
+      return respostas;
+    }
+
+    function mudarEtapaDemanda(delta) {
+      salvarRascunhoDemanda();
+      if (delta > 0 && !validarEtapaDemanda()) return;
+      state.demandStep = Math.min(Math.max(1, state.demandStep + delta), state.questionario.etapas.length);
+      state.demandDraft.etapa = state.demandStep;
+      salvarRascunhoDemanda();
+      renderizarWizardDemanda();
+      elements.demandView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function validarEtapaDemanda() {
+      const campos = camposDaEtapaDemanda(state.demandStep);
+      for (let i = 0; i < campos.length; i++) {
+        const controles = elements.demandWizard.querySelectorAll('[name="' + cssEscape(campos[i]) + '"]');
+        if (!controles.length || !state.questionario.campos[campos[i]].obrigatorio) continue;
+        const campo = state.questionario.campos[campos[i]];
+        const valido = campo.tipo === 'multipla'
+          ? Array.prototype.slice.call(controles).some(function (input) { return input.checked; })
+          : (campo.tipo === 'unica' || campo.tipo === 'profissional'
+            ? Array.prototype.slice.call(controles).some(function (input) { return input.checked; })
+            : (campo.tipo === 'consentimento'
+              ? controles[0].checked
+              : (campo.tipo === 'select' ? !!controles[0].value : controles[0].checkValidity())));
+        if (!valido) {
+          mostrarAviso('Preencha: ' + campo.rotulo, true, false);
+          const alvo = campo.tipo === 'select'
+            ? controles[0].closest('.custom-select').querySelector('[data-custom-select-toggle]')
+            : controles[0];
+          alvo.focus();
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function renderizarRevisaoDemanda() {
+      const respostas = state.demandDraft.respostas || {};
+      return '<h3>Revise antes de enviar</h3>' + Object.keys(state.questionario.campos).filter(function (chave) { return chave !== 'consentimento' && respostas[chave]; }).map(function (chave) {
+        const campo = state.questionario.campos[chave];
+        const valor = Array.isArray(respostas[chave]) ? respostas[chave].join(', ') : respostas[chave];
+        return '<div><strong>' + escaparHtml(campo.rotulo) + '</strong><span>' + escaparHtml(valor) + '</span></div>';
+      }).join('');
+    }
+
+    function enviarDemandaWizard(event) {
+      event.preventDefault();
+      salvarRascunhoDemanda();
+      if (state.demandSubmitting || !validarEtapaDemanda()) return;
+      state.demandSubmitting = true;
+      elements.wizardSubmit.disabled = true;
+      elements.wizardSubmit.textContent = 'Enviando…';
+      executarAppsScript('enviarDemandaPwaPrescricao', {
+        versao: state.questionario.versao, tentativaId: state.demandDraft.tentativaId, respostas: state.demandDraft.respostas,
+      }).then(function (resultado) {
+        window.localStorage.removeItem(DEMAND_DRAFT_KEY);
+        state.demandDraft = criarRascunhoDemanda();
+        state.demandStep = 1;
+        mostrarAviso('Demanda enviada com sucesso. ID: ' + (resultado.demandaId || ''), false, false);
+        renderizarWizardDemanda();
+      }).catch(function (erro) {
+        mostrarAviso('Não foi possível enviar. Seu rascunho foi mantido: ' + mensagemErro(erro), true, false);
+      }).finally(function () {
+        state.demandSubmitting = false;
+        elements.wizardSubmit.disabled = false;
+        elements.wizardSubmit.textContent = 'Enviar demanda';
+      });
+    }
+
+    function executarAppsScript(nomeFuncao) {
+      const args = Array.prototype.slice.call(arguments, 1);
+      if (temAppsScript()) {
+        return new Promise(function (resolve, reject) {
+          const chamada = google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler(reject);
+          chamada[nomeFuncao](...args);
+        });
+      }
+      return executarMock(nomeFuncao, args);
+    }
+
+    function temAppsScript() {
+      return typeof google !== 'undefined'
+        && google.script
+        && google.script.run;
+    }
+
+    function executarMock(nomeFuncao, args) {
+      if (!state.previewPayload) {
+        state.previewPayload = criarPayloadPreview();
+      }
+
+      return new Promise(function (resolve, reject) {
+        window.setTimeout(function () {
+          if (
+            nomeFuncao === 'getDadosPrescricoes'
+            || nomeFuncao === 'atualizarMonitoramentoEObterDados'
+          ) {
+            const payload = clonar(state.previewPayload);
+            payload.atualizadoEm = dataHoraAgora();
+            payload.sincronizacao = {
+              novos: 0,
+              totalRespostas: payload.registros.length,
+            };
+            resolve(payload);
+            return;
+          }
+
+          if (nomeFuncao === 'getQuestionarioPwaPrescricao') {
+            resolve(criarQuestionarioPreview());
+            return;
+          }
+
+          if (nomeFuncao === 'enviarDemandaPwaPrescricao') {
+            resolve({ ok: true, demandaId: 'DEM-PRÉVIA-001', repetida: false });
+            return;
+          }
+
+          if (nomeFuncao === 'getRespostasAnamnese') {
+            const registroAnamnese = state.previewPayload.registros.find(function (item) {
+              return item.submissionId === args[0];
+            });
+            if (!registroAnamnese) {
+              reject(new Error('Registro não encontrado.'));
+              return;
+            }
+            resolve(clonar(registroAnamnese.respostas || []));
+            return;
+          }
+
+          if (nomeFuncao === 'getRespostasAnamneses') {
+            const respostasEmLote = {};
+            (args[0] || []).forEach(function (id) {
+              const registroLote = state.previewPayload.registros.find(function (item) {
+                return item.submissionId === id;
+              });
+              if (registroLote) {
+                respostasEmLote[id] = clonar(registroLote.respostas || []);
+              }
+            });
+            resolve(respostasEmLote);
+            return;
+          }
+
+          if (nomeFuncao === 'salvarMonitoramentoPrescricao') {
+            const id = args[0];
+            const registro = state.previewPayload.registros.find(function (item) {
+              return item.submissionId === id;
+            });
+            if (!registro) {
+              reject(new Error('Registro não encontrado.'));
+              return;
+            }
+            if (args[2] && !args[3]) {
+              reject(new Error('A data da prescrição é obrigatória.'));
+              return;
+            }
+
+            registro.monitoramento.anamneseTransferida = !!args[1];
+            registro.monitoramento.treinoPrescrito = !!args[2];
+            registro.monitoramento.dataPrescricao = args[2] ? args[3] : '';
+            registro.monitoramento.dataPrescricaoLabel = args[2] ? dataBr(args[3]) : '';
+            registro.monitoramento.atualizadoEm = dataHoraAgora();
+            registro.status = args[2] ? 'prescrito' : (args[1] ? 'pendente' : 'a_transferir');
+            registro.statusLabel = registro.status === 'prescrito'
+              ? 'Prescrito'
+              : (registro.status === 'pendente' ? 'Pendente' : 'A transferir');
+            resolve(clonar(registro));
+            return;
+          }
+
+          reject(new Error('Função de prévia não encontrada: ' + nomeFuncao));
+        }, 260);
+      });
+    }
+
+    function criarPayloadPreview() {
+      const respostasBase = [
+        { campo: 'Email', valor: 'aluno@exemplo.com', tipo: 'texto' },
+        { campo: 'Whatsapp', valor: '85999999999', tipo: 'texto' },
+        { campo: 'Data de nascimento', valor: '1976-08-14', tipo: 'data' },
+        { campo: 'Consentimento', valor: 'Confirmo que minhas respostas serão usadas.', tipo: 'texto' },
+        { campo: 'Consentimento (Confirmo)', valor: true, tipo: 'booleano' },
+        { campo: 'Altura em centímetros', valor: 172, tipo: 'numero' },
+        { campo: 'Peso em kg', valor: 76, tipo: 'numero' },
+        { campo: 'Qual é sua experiência com musculação?', valor: 'Mais de 3 anos', tipo: 'texto' },
+        { campo: 'Qual seu objetivo principal agora?', valor: 'Ganhar massa', tipo: 'texto' },
+        { campo: 'Quantos dias por semana você consegue treinar de verdade, mesmo em semana corrida?', valor: 4, tipo: 'numero' },
+        { campo: 'Você sente alguma dor ou desconforto hoje que possa interferir no treino?', valor: 'Sim', tipo: 'texto' },
+        { campo: 'Onde é a dor ou desconforto?', valor: 'Região lombar', tipo: 'texto' },
+        { campo: 'Intensidade da dor de 0 a 10', valor: 3, tipo: 'numero' },
+        { campo: 'Tem alguma doença ou condição importante? (Nenhuma)', valor: true, tipo: 'booleano' },
+        { campo: 'Algum movimento costuma incomodar? (Agachar)', valor: true, tipo: 'booleano' },
+        { campo: 'Algum movimento costuma incomodar? (Correr)', valor: false, tipo: 'booleano' },
+        { campo: 'O que mais atrapalha você a seguir um treino? (Falta de tempo)', valor: true, tipo: 'booleano' },
+        { campo: 'Que tipo de treino você prefere?', valor: 'Com máquinas', tipo: 'texto' },
+        { campo: 'Tem algo importante sobre seu corpo, rotina ou treino que eu não perguntei?', valor: 'Trabalho sentado durante a maior parte do dia.', tipo: 'texto' },
+      ];
+
+      const hoje = new Date();
+      const data1 = deslocarData(hoje, -2);
+      const data2 = deslocarData(hoje, -5);
+      const data3 = deslocarData(hoje, -10);
+
+      return {
+        atualizadoEm: dataHoraAgora(),
+        profissionais: ['Elias', 'Lucas', 'Robson'],
+        periodos: [
+          { valor: periodoData(hoje), rotulo: mesAno(hoje) },
+        ],
+        registros: [
+          criarRegistroPreview('PREV001', 'MARIANA OLIVEIRA', 'Elias', data1, 'a_transferir', respostasBase),
+          criarRegistroPreview('PREV002', 'PAULO HENRIQUE SANTOS', 'Lucas', data2, 'pendente', respostasBase),
+          criarRegistroPreview('PREV003', 'ROBERTA SALES OLIVEIRA PINHEIRO', 'Robson', data3, 'prescrito', respostasBase),
+        ],
+      };
+    }
+
+    function criarRegistroPreview(id, aluno, profissional, data, status, respostas) {
+      const prescrito = status === 'prescrito';
+      const transferida = status !== 'a_transferir';
+      return {
+        submissionId: id,
+        aluno: aluno,
+        profissional: profissional,
+        dataAnamnese: isoLocal(data),
+        dataAnamneseLabel: dataHora(data),
+        periodo: periodoData(data),
+        status: status,
+        statusLabel: status === 'prescrito'
+          ? 'Prescrito'
+          : (status === 'pendente' ? 'Pendente' : 'A transferir'),
+        diasProcesso: prescrito ? 7 : Math.max(0, Math.round((new Date() - data) / 86400000)),
+        monitoramento: {
+          anamneseTransferida: transferida,
+          treinoPrescrito: prescrito,
+          dataPrescricao: prescrito ? isoData(deslocarData(data, 7)) : '',
+          dataPrescricaoLabel: prescrito ? dataBr(isoData(deslocarData(data, 7))) : '',
+          atualizadoEm: prescrito ? dataHoraAgora() : '',
+        },
+        respostas: clonar(respostas),
+        respostasCarregadas: true,
+      };
+    }
+
+    function dataLocal(valor) {
+      if (!valor) {
+        return null;
+      }
+      const data = new Date(valor);
+      return isNaN(data.getTime()) ? null : data;
+    }
+
+    function tempoRegistro(registro) {
+      const data = dataLocal(registro.dataAnamnese);
+      return data ? data.getTime() : 0;
+    }
+
+    function dataCurta(valor) {
+      const data = dataLocal(valor);
+      if (!data) {
+        return 'Sem data';
+      }
+      return pad(data.getDate()) + '/' + pad(data.getMonth() + 1) + '/' + data.getFullYear();
+    }
+
+    function dataBr(valor) {
+      const partes = String(valor || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      return partes ? partes[3] + '/' + partes[2] + '/' + partes[1] : '';
+    }
+
+    function dataHoraAgora() {
+      return dataHora(new Date());
+    }
+
+    function dataHora(data) {
+      return pad(data.getDate()) + '/'
+        + pad(data.getMonth() + 1) + '/'
+        + data.getFullYear() + ' '
+        + pad(data.getHours()) + ':'
+        + pad(data.getMinutes());
+    }
+
+    function isoData(data) {
+      return data.getFullYear() + '-' + pad(data.getMonth() + 1) + '-' + pad(data.getDate());
+    }
+
+    function isoLocal(data) {
+      return isoData(data) + 'T' + pad(data.getHours()) + ':' + pad(data.getMinutes()) + ':00';
+    }
+
+    function periodoData(data) {
+      return data.getFullYear() + '-' + pad(data.getMonth() + 1);
+    }
+
+    function mesAno(data) {
+      return pad(data.getMonth() + 1) + '/' + data.getFullYear();
+    }
+
+    function deslocarData(data, dias) {
+      const copia = new Date(data.getTime());
+      copia.setDate(copia.getDate() + dias);
+      return copia;
+    }
+
+    function pad(valor) {
+      return String(valor).padStart(2, '0');
+    }
+
+    function valorVazio(valor) {
+      return valor === null || valor === undefined || String(valor).trim() === '';
+    }
+
+    function contemAlgum(texto, termos) {
+      return termos.some(function (termo) {
+        return texto.indexOf(termo) !== -1;
+      });
+    }
+
+    function normalizarTexto(valor) {
+      return String(valor || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function compararTexto(a, b) {
+      return String(a || '').localeCompare(String(b || ''), 'pt-BR');
+    }
+
+    function clonar(valor) {
+      return JSON.parse(JSON.stringify(valor));
+    }
+
+    function mensagemErro(erro) {
+      return erro && erro.message ? erro.message : String(erro || 'Erro desconhecido.');
+    }
+
+    function escaparHtml(valor) {
+      return String(valor === null || valor === undefined ? '' : valor)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escaparAttr(valor) {
+      return escaparHtml(valor);
+    }
+
+    function cssEscape(valor) {
+      if (window.CSS && typeof window.CSS.escape === 'function') {
+        return window.CSS.escape(String(valor));
+      }
+      return String(valor).replace(/["\\]/g, '\\$&');
+    }
+
+    function renderizarErro(titulo, detalhe) {
+      return '<div class="error-state">'
+        + '<strong>' + escaparHtml(titulo) + '</strong>'
+        + '<span>' + escaparHtml(detalhe) + '</span>'
+        + '</div>';
+    }
+  }());
+</script>

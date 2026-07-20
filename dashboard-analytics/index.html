@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#05070d">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Dashboard gerencial de prescrições</title>
+  <?!= include('styles'); ?>
+</head>
+<body>
+  <svg class="svg-symbols" aria-hidden="true">
+    <symbol id="analyticsLogo" viewBox="0 0 447 447">
+      <rect width="447" height="447" rx="82" fill="#dfff32"/>
+      <path d="M319 315c-1 2-223 1-223 0 0-1 2-4 26-28l60-64-55-92h226l-80 91 47 93zm-127-2 79-89h-41l37-90-84 89h46l-37 90z" fill="#05070d"/>
+    </symbol>
+  </svg>
+
+  <div class="boot-screen" id="bootScreen" aria-live="polite">
+    <svg class="boot-logo" role="img" aria-label="CB Fitness"><use href="#analyticsLogo"></use></svg>
+    <strong>Dashboard de prescrições</strong>
+    <span id="bootStatus">Organizando os indicadores</span>
+    <div class="boot-track" aria-hidden="true"><i></i></div>
+  </div>
+
+  <div class="app-shell" id="appShell" hidden>
+    <header class="topbar">
+      <div class="brand">
+        <svg class="brand-logo" role="img" aria-label="CB Fitness"><use href="#analyticsLogo"></use></svg>
+        <div><h1>Gestão de prescrições</h1><p id="updatedAt">Dados em preparação</p></div>
+      </div>
+      <button class="primary-button" id="refreshButton" type="button"><span aria-hidden="true">↻</span> Atualizar dados</button>
+    </header>
+
+    <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+    <section class="data-error" id="dataError" hidden>
+      <strong>A base ainda não está pronta</strong>
+      <p id="dataErrorMessage"></p>
+      <ol id="dataErrorSteps"></ol>
+    </section>
+
+    <section class="global-filters" aria-label="Filtros globais">
+      <label>Período
+          <select id="periodFilter" data-themed-select>
+          <option value="30">Últimos 30 dias</option>
+          <option value="7">Últimos 7 dias</option>
+          <option value="90">Últimos 90 dias</option>
+          <option value="todos">Todo o histórico</option>
+        </select>
+      </label>
+      <label>Profissional
+          <select id="professionalFilter" data-themed-select><option value="todos">Equipe completa</option></select>
+      </label>
+    </section>
+
+    <main>
+      <section class="view is-active" data-view="acompanhamento" aria-labelledby="titleAcompanhamento">
+        <div class="section-heading"><div><span class="eyebrow">Fila operacional</span><h2 id="titleAcompanhamento">Acompanhamento</h2><p>Veja quem precisa agir e em qual etapa.</p></div></div>
+        <div class="kpi-grid" id="acompanhamentoKpis"></div>
+        <div class="panel filter-panel">
+          <label class="search-field">Buscar aluno ou ID
+            <input id="searchInput" type="search" placeholder="Nome ou ID da demanda" autocomplete="off">
+          </label>
+          <label>Situação
+            <select id="situationFilter" data-themed-select>
+              <option value="a_fazer">A fazer</option>
+              <option value="nao_transferida">Não transferidas</option>
+              <option value="pendente">Aguardando prescrição</option>
+              <option value="prescrita">Concluídas</option>
+              <option value="todos">Todas</option>
+            </select>
+          </label>
+          <label>Prazo
+            <select id="deadlineFilter" data-themed-select>
+              <option value="todos">Todos os prazos</option>
+              <option value="atrasada">Atrasadas</option>
+              <option value="vence_hoje">Vencem hoje</option>
+              <option value="dentro_prazo">Dentro do prazo</option>
+            </select>
+          </label>
+        </div>
+        <div class="list-heading"><h3>Demandas</h3><div class="heading-actions"><span id="itemCount">0 itens</span><button class="help-button" type="button" data-help="lista_demandas" aria-label="Entender os cartões de demanda" aria-expanded="false">?</button></div></div>
+        <div class="demand-list" id="demandList"></div>
+      </section>
+
+      <section class="view" data-view="produtividade" aria-labelledby="titleProdutividade" hidden>
+        <div class="section-heading"><div><span class="eyebrow">Leitura descritiva</span><h2 id="titleProdutividade">Produtividade</h2><p>Volume, velocidade, backlog e gargalos sem reduzir o trabalho a uma nota única.</p></div></div>
+        <div class="context-strip" id="productivityContext"></div>
+        <div class="metric-groups" id="productivityMetrics"></div>
+        <section class="panel"><div class="panel-title"><h3>Gargalos observados</h3><div class="panel-title-actions"><span>Regras operacionais</span><button class="help-button" type="button" data-help="gargalos" aria-label="Entender os gargalos" aria-expanded="false">?</button></div></div><div class="diagnostic-list" id="diagnosticList"></div></section>
+        <section class="panel"><div class="panel-title"><h3>Profissionais</h3><div class="panel-title-actions"><label>Ordenar por <select id="rankingSort" data-themed-select><option value="concluidas">Concluídas</option><option value="backlog">Backlog</option><option value="atrasadas">Atrasadas</option><option value="taxaSla">SLA</option><option value="tempoMediano">Mediana</option></select></label><button class="help-button" type="button" data-help="tabela_produtividade" aria-label="Entender a tabela de profissionais" aria-expanded="false">?</button></div></div><div class="table-wrap"><table><thead><tr><th>Profissional</th><th>Recebidas</th><th>Concluídas</th><th>Backlog</th><th>Atrasadas</th><th>SLA</th><th>Mediana</th></tr></thead><tbody id="productivityTable"></tbody></table></div></section>
+      </section>
+
+      <section class="view" data-view="comparativos" aria-labelledby="titleComparativos" hidden>
+        <div class="section-heading"><div><span class="eyebrow">Evolução e comparação</span><h2 id="titleComparativos">Comparativos</h2><p>Compare demanda recebida, produção, prazo e estoque de trabalho.</p></div><button class="help-button" type="button" data-help="comparacao_periodo" aria-label="Entender a comparação de períodos" aria-expanded="false">?</button></div>
+        <div class="comparison-summary" id="comparisonSummary"></div>
+        <div class="chart-grid">
+          <section class="panel chart-panel"><div class="panel-title"><h3>Entradas x conclusões</h3><div class="panel-title-actions"><span id="flowCaption"></span><button class="help-button" type="button" data-help="grafico_fluxo" aria-label="Entender o gráfico de entradas e conclusões" aria-expanded="false">?</button></div></div><div id="flowChart"></div></section>
+          <section class="panel chart-panel"><div class="panel-title"><h3>Evolução do backlog</h3><div class="panel-title-actions"><span>Estoque ao fim do período</span><button class="help-button" type="button" data-help="grafico_backlog" aria-label="Entender a evolução do backlog" aria-expanded="false">?</button></div></div><div id="backlogChart"></div></section>
+          <section class="panel chart-panel chart-wide"><div class="panel-title"><h3>Produção por profissional</h3><div class="panel-title-actions"><span>Recebidas e concluídas</span><button class="help-button" type="button" data-help="grafico_producao" aria-label="Entender a produção por profissional" aria-expanded="false">?</button></div></div><div id="professionalChart"></div></section>
+          <section class="panel chart-panel"><div class="panel-title"><h3>Composição do backlog</h3><div class="panel-title-actions"><span>Etapa por profissional</span><button class="help-button" type="button" data-help="grafico_etapas" aria-label="Entender a composição do backlog" aria-expanded="false">?</button></div></div><div id="backlogStageChart"></div></section>
+          <section class="panel chart-panel"><div class="panel-title"><h3>Cumprimento do SLA</h3><div class="panel-title-actions"><span>Percentual em até 2 dias</span><button class="help-button" type="button" data-help="grafico_sla" aria-label="Entender o cumprimento do SLA" aria-expanded="false">?</button></div></div><div id="slaChart"></div></section>
+          <section class="panel chart-panel chart-wide"><div class="panel-title"><h3>Tempo até a prescrição</h3><div class="panel-title-actions"><span>Média, mediana e P75 em dias</span><button class="help-button" type="button" data-help="grafico_tempo" aria-label="Entender o tempo até a prescrição" aria-expanded="false">?</button></div></div><div id="timeChart"></div></section>
+        </div>
+        <section class="panel"><div class="panel-title"><h3>Tabela comparativa</h3><div class="panel-title-actions"><span>Alternativa aos gráficos</span><button class="help-button" type="button" data-help="tabela_comparativa" aria-label="Entender a tabela comparativa" aria-expanded="false">?</button></div></div><div class="table-wrap"><table><thead><tr><th>Profissional</th><th>Recebidas</th><th>Concluídas</th><th>Saldo</th><th>Não transferidas</th><th>Pendentes</th><th>SLA</th><th>P75</th></tr></thead><tbody id="comparisonTable"></tbody></table></div></section>
+      </section>
+
+      <section class="view" data-view="questionario" aria-labelledby="titleQuestionario" hidden>
+        <div class="section-heading"><div><span class="eyebrow">Formulário dos prescritores</span><h2 id="titleQuestionario">Questionário</h2><p>Crie uma nova versão, revise as perguntas e publique somente quando estiver pronta.</p></div></div>
+        <div id="questionnaireStatus" class="questionnaire-status" aria-live="polite"></div>
+        <div id="questionnaireEditor" class="questionnaire-editor"></div>
+      </section>
+    </main>
+
+    <nav class="app-nav" aria-label="Navegação principal">
+      <button data-tab="acompanhamento" aria-selected="true"><span aria-hidden="true">☷</span>Acompanhamento</button>
+      <button data-tab="produtividade" aria-selected="false"><span aria-hidden="true">◎</span>Produtividade</button>
+      <button data-tab="comparativos" aria-selected="false"><span aria-hidden="true">▥</span>Comparativos</button>
+      <button data-tab="questionario" aria-selected="false"><span aria-hidden="true">☰</span>Questionário</button>
+    </nav>
+
+    <aside class="help-popover" id="helpPopover" role="dialog" aria-labelledby="helpTitle" aria-describedby="helpText" hidden>
+      <div class="help-popover-header">
+        <strong id="helpTitle">Entenda este indicador</strong>
+        <button class="help-close" id="helpClose" type="button" aria-label="Fechar explicação">×</button>
+      </div>
+      <p id="helpText"></p>
+    </aside>
+  </div>
+
+  <div class="questionnaire-modal" id="questionnaireModal" hidden>
+    <div class="questionnaire-backdrop" data-close-questionnaire></div>
+    <section class="questionnaire-dialog" role="dialog" aria-modal="true" aria-labelledby="questionnaireModalTitle">
+      <header><h2 id="questionnaireModalTitle">Confirmar alteração</h2><button type="button" data-close-questionnaire aria-label="Fechar">×</button></header>
+      <div id="questionnaireModalContent"></div>
+    </section>
+  </div>
+
+  <div class="anamnesis-modal" id="anamnesisModal" hidden>
+    <div class="anamnesis-backdrop" data-close-anamnesis></div>
+    <section class="anamnesis-dialog" role="dialog" aria-modal="true" aria-labelledby="anamnesisTitle" aria-describedby="anamnesisSubtitle">
+      <header class="anamnesis-header">
+        <div>
+          <span class="eyebrow">Ficha de anamnese</span>
+          <h2 id="anamnesisTitle">Aluno</h2>
+          <p id="anamnesisSubtitle"></p>
+        </div>
+        <div class="anamnesis-actions">
+          <a class="anamnesis-action whatsapp-action" id="anamnesisWhatsapp" href="#" target="_blank" rel="noopener noreferrer" aria-label="Abrir conversa no WhatsApp" title="Conversar no WhatsApp" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 2.6 18L1.3 22.7 6.1 21.4A11.8 11.8 0 1 0 20.5 3.5Zm-8.6 17.1a9.7 9.7 0 0 1-4.9-1.3l-.3-.2-2.8.7.8-2.7-.2-.3A9.7 9.7 0 1 1 12 20.6Zm5.3-7.2c-.3-.1-1.8-.9-2.1-1-.3-.1-.5-.1-.7.1l-.9 1.1c-.2.2-.3.3-.6.1a7.9 7.9 0 0 1-2.3-1.4 8.6 8.6 0 0 1-1.6-2c-.2-.3 0-.5.1-.6l.5-.6.3-.5c.1-.2 0-.4 0-.5L9 5.8c-.2-.5-.5-.4-.7-.4h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1 2.9 1.1 3.1c.1.2 2 3 4.8 4.2.7.3 1.2.5 1.7.6.7.2 1.3.2 1.8.1.5-.1 1.8-.7 2-1.4.3-.6.3-1.2.2-1.3-.1-.1-.3-.2-.6-.3Z"/></svg>
+          </a>
+          <button id="anamnesisExpandToggle" type="button" aria-label="Expandir todos os blocos" title="Expandir todos os blocos">↕</button>
+          <button class="anamnesis-delete" id="anamnesisDelete" type="button" data-delete-demand aria-label="Excluir demanda" title="Excluir demanda">⌫</button>
+          <button id="anamnesisClose" type="button" data-close-anamnesis aria-label="Fechar ficha">×</button>
+        </div>
+      </header>
+      <div class="anamnesis-content" id="anamnesisContent"></div>
+    </section>
+  </div>
+  <?!= include('charts'); ?>
+  <?!= include('scripts'); ?>
+</body>
+</html>

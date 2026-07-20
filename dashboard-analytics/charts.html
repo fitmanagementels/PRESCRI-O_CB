@@ -1,0 +1,65 @@
+<script>
+function escSvg(valor) {
+  return String(valor == null ? '' : valor).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; });
+}
+
+function calcularDominio(valores) {
+  const validos = (valores || []).map(Number).filter(Number.isFinite);
+  if (!validos.length) return { min: 0, max: 1 };
+  return { min: Math.min(0, Math.min.apply(null, validos)), max: Math.max.apply(null, validos) };
+}
+
+function renderLineChart(dados, opcoes) {
+  opcoes = opcoes || {};
+  const series = opcoes.series || [{ campo: opcoes.campo || 'valor', rotulo: opcoes.rotulo || 'Valor', classe: '' }];
+  const width = 680, height = 250, left = 42, right = 14, top = 20, bottom = 38;
+  const valores = [];
+  series.forEach(function (serie) { (dados || []).forEach(function (item) { valores.push(Number(item[serie.campo] || 0)); }); });
+  const dominio = calcularDominio(valores);
+  const max = dominio.max === dominio.min ? dominio.max + 1 : dominio.max;
+  const plotW = width - left - right, plotH = height - top - bottom;
+  function x(i) { return left + (dados.length <= 1 ? plotW / 2 : i * plotW / (dados.length - 1)); }
+  function y(v) { return top + (max - Number(v || 0)) * plotH / (max - dominio.min || 1); }
+  let svg = '<div class="chart-shell"><svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="' + escSvg(opcoes.titulo || 'Gráfico de linha') + '"><title>' + escSvg(opcoes.titulo || 'Gráfico de linha') + '</title>';
+  for (let n = 0; n <= 4; n++) {
+    const gy = top + n * plotH / 4;
+    const valor = max - n * (max - dominio.min) / 4;
+    svg += '<line class="chart-gridline" x1="' + left + '" y1="' + gy + '" x2="' + (width - right) + '" y2="' + gy + '"/><text class="chart-label" x="' + (left - 7) + '" y="' + (gy + 3) + '" text-anchor="end">' + Math.round(valor) + '</text>';
+  }
+  series.forEach(function (serie, si) {
+    const pontos = (dados || []).map(function (item, i) { return x(i) + ',' + y(item[serie.campo]); }).join(' ');
+    svg += '<polyline class="chart-line ' + (serie.classe || (si ? 'secondary' : '')) + '" points="' + pontos + '"/>';
+  });
+  const passo = Math.max(1, Math.ceil((dados || []).length / 6));
+  (dados || []).forEach(function (item, i) { if (i % passo === 0 || i === dados.length - 1) svg += '<text class="chart-label" x="' + x(i) + '" y="' + (height - 12) + '" text-anchor="middle">' + escSvg(formatarRotuloPeriodo(item.periodo)) + '</text>'; });
+  svg += '</svg><div class="chart-legend">' + series.map(function (s, i) { return '<span><i class="legend-swatch ' + (s.classe || (i ? 'blue' : '')) + '"></i>' + escSvg(s.rotulo) + '</span>'; }).join('') + '</div>';
+  svg += '<table class="chart-data-table"><caption>' + escSvg(opcoes.titulo || 'Dados do gráfico') + '</caption><tbody>' + (dados || []).map(function (item) { return '<tr><th>' + escSvg(item.periodo) + '</th>' + series.map(function (s) { return '<td>' + Number(item[s.campo] || 0) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+  return svg;
+}
+
+function renderBarChart(dados, opcoes) {
+  opcoes = opcoes || {};
+  const series = opcoes.series || [{ campo: opcoes.campo || 'valor', rotulo: opcoes.rotulo || 'Valor', classe: '' }];
+  const width = 680, height = Math.max(230, (dados || []).length * 38 + 55), left = 130, right = 25, top = 18, bottom = 25;
+  const valores = [];
+  series.forEach(function (s) { (dados || []).forEach(function (d) { valores.push(Number(d[s.campo] || 0)); }); });
+  const max = Math.max(1, calcularDominio(valores).max), plotW = width - left - right;
+  const grupoH = (height - top - bottom) / Math.max(1, dados.length), barH = Math.min(12, (grupoH - 5) / series.length);
+  let svg = '<div class="chart-shell"><svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="' + escSvg(opcoes.titulo || 'Gráfico de barras') + '"><title>' + escSvg(opcoes.titulo || 'Gráfico de barras') + '</title>';
+  (dados || []).forEach(function (item, i) {
+    const yBase = top + i * grupoH;
+    svg += '<text class="chart-label" x="' + (left - 8) + '" y="' + (yBase + grupoH / 2 + 3) + '" text-anchor="end">' + escSvg((item.rotulo || item.profissional || '').slice(0, 20)) + '</text>';
+    series.forEach(function (s, si) {
+      const valor = Number(item[s.campo] || 0), w = valor / max * plotW, y = yBase + 3 + si * (barH + 3);
+      svg += '<rect class="chart-bar ' + (s.classe || (si ? 'secondary' : '')) + '" x="' + left + '" y="' + y + '" width="' + w + '" height="' + barH + '" rx="2"/><text class="chart-label" x="' + (left + w + 5) + '" y="' + (y + barH - 1) + '">' + valor + '</text>';
+    });
+  });
+  svg += '</svg><div class="chart-legend">' + series.map(function (s, i) { return '<span><i class="legend-swatch ' + (s.classe || (i ? 'blue' : '')) + '"></i>' + escSvg(s.rotulo) + '</span>'; }).join('') + '</div>';
+  svg += '<table class="chart-data-table"><caption>' + escSvg(opcoes.titulo || 'Dados do gráfico') + '</caption><tbody>' + (dados || []).map(function (item) { return '<tr><th>' + escSvg(item.rotulo || item.profissional) + '</th>' + series.map(function (s) { return '<td>' + Number(item[s.campo] || 0) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+  return svg;
+}
+
+function renderStackedBarChart(dados, opcoes) {
+  return renderBarChart(dados, opcoes);
+}
+</script>

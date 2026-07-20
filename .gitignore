@@ -1,0 +1,16 @@
+# Dependências e arquivos gerados localmente
+node_modules/
+.DS_Store
+
+# Configurações e credenciais locais
+.env
+.env.*
+!.env.example
+.clasp.json
+credentials.json
+token.json
+
+# Diretórios internos de ferramentas
+.agents/
+.codex/
+.superpowers/

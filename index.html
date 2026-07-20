@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#05070d">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="application-name" content="XSTEAM Prescrições">
+  <meta name="apple-mobile-web-app-title" content="XSTEAM Prescrições">
+  <title>Acompanhamento de prescrições</title>
+  <?!= include('styles'); ?>
+</head>
+<body>
+  <svg class="svg-symbols" aria-hidden="true">
+    <symbol id="xsteamLogo" viewBox="0 0 447 447">
+      <path d="M 319.37 315.20 C318.56,316.52 96.00,316.18 96.00,314.86 C96.00,313.79 98.34,311.25 122.06,286.51 C127.87,280.46 143.66,263.80 157.15,249.50 L 181.68 223.50 L 178.98 219.00 C177.49,216.52 168.28,201.00 158.51,184.50 C148.74,168.00 137.68,149.32 133.93,143.00 L 127.10 131.50 L 183.55 131.24 C214.60,131.10 265.41,131.10 296.46,131.24 L 352.91 131.50 L 342.33 143.50 C295.43,196.65 276.30,218.44 273.21,222.22 C271.88,223.85 271.91,223.91 294.82,267.00 C313.49,302.11 319.80,314.51 319.37,315.20 ZM 192.00 312.57 C192.00,313.85 194.64,311.10 207.66,296.22 C215.23,287.58 225.04,276.44 229.46,271.47 C233.88,266.51 240.20,259.34 243.50,255.54 C246.80,251.75 254.31,243.21 260.19,236.57 L 270.88 224.50 L 250.44 224.23 C239.20,224.08 230.00,223.56 230.00,223.06 C230.00,222.57 231.55,218.64 233.43,214.33 C235.32,210.03 240.97,196.82 245.98,185.00 L 258.69 155.00 C260.68,150.32 263.42,143.90 264.79,140.73 C266.17,137.56 267.07,134.74 266.80,134.47 C266.53,134.20 256.23,144.65 243.90,157.69 C231.58,170.73 212.84,190.53 202.25,201.69 C191.66,212.85 183.00,222.43 183.00,222.99 C183.00,223.64 191.17,224.00 206.00,224.00 C218.65,224.00 229.00,224.18 229.00,224.40 C229.00,224.61 227.70,227.88 226.11,231.65 C220.17,245.77 203.54,284.99 197.88,298.26 C194.64,305.83 192.00,312.27 192.00,312.57 Z" fill="rgb(0,1,1)"/>
+      <path d="M 0.00 223.50 L 0.00 0.00 L 223.50 0.00 L 447.00 0.00 L 447.00 223.50 L 447.00 447.00 L 223.50 447.00 L 0.00 447.00 L 0.00 223.50 ZM 319.37 315.20 C319.80,314.51 313.49,302.11 294.82,267.00 C271.91,223.91 271.88,223.85 273.21,222.22 C276.30,218.44 295.43,196.65 342.33,143.50 L 352.91 131.50 L 296.46 131.24 C265.41,131.10 214.60,131.10 183.55,131.24 L 127.10 131.50 L 133.93 143.00 C137.68,149.32 148.74,168.00 158.51,184.50 C168.28,201.00 177.49,216.52 178.98,219.00 L 181.68 223.50 L 157.15 249.50 C143.66,263.80 127.87,280.46 122.06,286.51 C98.34,311.25 96.00,313.79 96.00,314.86 C96.00,316.18 318.56,316.52 319.37,315.20 ZM 192.00 312.57 C192.00,312.27 194.64,305.83 197.88,298.26 C203.54,284.99 220.17,245.77 226.11,231.65 C227.70,227.88 229.00,224.61 229.00,224.40 C229.00,224.18 218.65,224.00 206.00,224.00 C191.17,224.00 183.00,223.64 183.00,222.99 C183.00,222.43 191.66,212.85 202.25,201.69 C212.84,190.53 231.58,170.73 243.90,157.69 C256.23,144.65 266.53,134.20 266.80,134.47 C267.07,134.74 266.17,137.56 264.79,140.73 C263.42,143.90 260.68,150.32 258.69,155.00 C256.71,159.68 250.99,173.18 245.98,185.00 C240.97,196.82 235.32,210.03 233.43,214.33 C231.55,218.64 230.00,222.57 230.00,223.06 C230.00,223.56 239.20,224.08 250.44,224.23 L 270.88 224.50 L 260.19 236.57 C254.31,243.21 246.80,251.75 243.50,255.54 C240.20,259.34 233.88,266.51 229.46,271.47 C225.04,276.44 215.23,287.58 207.66,296.22 C194.64,311.10 192.00,313.85 192.00,312.57 Z" fill="rgb(223,251,69)"/>
+    </symbol>
+    <symbol id="cbFitnessHeaderLogo" viewBox="0 0 447 447">
+      <rect x="22" y="22" width="403" height="403" rx="72" fill="none" stroke="currentColor" stroke-width="16" opacity="0.68"/>
+      <path d="M 319.37 315.20 C318.56,316.52 96.00,316.18 96.00,314.86 C96.00,313.79 98.34,311.25 122.06,286.51 C127.87,280.46 143.66,263.80 157.15,249.50 L 181.68 223.50 L 178.98 219.00 C177.49,216.52 168.28,201.00 158.51,184.50 C148.74,168.00 137.68,149.32 133.93,143.00 L 127.10 131.50 L 183.55 131.24 C214.60,131.10 265.41,131.10 296.46,131.24 L 352.91 131.50 L 342.33 143.50 C295.43,196.65 276.30,218.44 273.21,222.22 C271.88,223.85 271.91,223.91 294.82,267.00 C313.49,302.11 319.80,314.51 319.37,315.20 ZM 192.00 312.57 C192.00,313.85 194.64,311.10 207.66,296.22 C215.23,287.58 225.04,276.44 229.46,271.47 C233.88,266.51 240.20,259.34 243.50,255.54 C246.80,251.75 254.31,243.21 260.19,236.57 L 270.88 224.50 L 250.44 224.23 C239.20,224.08 230.00,223.56 230.00,223.06 C230.00,222.57 231.55,218.64 233.43,214.33 C235.32,210.03 240.97,196.82 245.98,185.00 L 258.69 155.00 C260.68,150.32 263.42,143.90 264.79,140.73 C266.17,137.56 267.07,134.74 266.80,134.47 C266.53,134.20 256.23,144.65 243.90,157.69 C231.58,170.73 212.84,190.53 202.25,201.69 C191.66,212.85 183.00,222.43 183.00,222.99 C183.00,223.64 191.17,224.00 206.00,224.00 C218.65,224.00 229.00,224.18 229.00,224.40 C229.00,224.61 227.70,227.88 226.11,231.65 C220.17,245.77 203.54,284.99 197.88,298.26 C194.64,305.83 192.00,312.27 192.00,312.57 Z" fill="currentColor"/>
+    </symbol>
+  </svg>
+
+  <div class="boot-screen" id="bootScreen" aria-live="polite">
+    <svg class="boot-logo" role="img" aria-label="XSTEAM">
+      <use href="#xsteamLogo"></use>
+    </svg>
+    <div class="boot-title">Acompanhamento de prescrições</div>
+    <div class="boot-status" id="bootStatus">Preparando o app</div>
+    <div class="boot-progress-row">
+      <div class="boot-bar" role="progressbar" aria-label="Inicialização" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span id="bootProgress"></span>
+      </div>
+      <span class="boot-percent" id="bootPercent">0%</span>
+    </div>
+  </div>
+
+  <div class="app-shell" id="appShell" hidden>
+    <header class="topbar">
+      <div class="brand-row">
+        <svg class="brand-logo" role="img" aria-label="CB Fitness">
+          <use href="#cbFitnessHeaderLogo"></use>
+        </svg>
+        <div class="brand-copy">
+          <h1>Prescrições da CB Fitness</h1>
+          <p id="updatedAt">Carregando dados</p>
+        </div>
+      </div>
+      <button class="refresh-button" id="refreshButton" type="button">
+        <span class="refresh-icon" aria-hidden="true">↻</span>
+        <span>Atualizar</span>
+      </button>
+    </header>
+
+    <nav class="app-tabs" aria-label="Seções do aplicativo">
+      <button class="app-tab is-active" type="button" data-app-view="acompanhamento" aria-selected="true">Acompanhar demandas</button>
+      <button class="app-tab" type="button" data-app-view="nova-demanda" aria-selected="false">Adicionar demanda</button>
+    </nav>
+
+    <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+
+    <main id="prescriptionsView">
+      <section class="filters-section" aria-label="Filtros de prescrições">
+        <div class="field field-search">
+          <label for="searchInput">Buscar aluno</label>
+          <div class="search-control">
+            <input
+              id="searchInput"
+              type="search"
+              inputmode="search"
+              autocomplete="off"
+              placeholder="Aluno ou Submission ID"
+            >
+            <span class="search-icon" aria-hidden="true">⌕</span>
+          </div>
+        </div>
+
+        <div class="filters-grid">
+          <div class="field">
+            <label for="professionalFilter">Profissional</label>
+            <select id="professionalFilter">
+              <option value="todos">Todos os profissionais</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="periodFilter">Período</label>
+            <select id="periodFilter">
+              <option value="ultimos_45">Últimos 45 dias</option>
+              <option value="geral">Todos</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics-grid" id="metrics" aria-label="Resumo das prescrições"></section>
+
+      <section class="list-section" aria-labelledby="listTitle">
+        <div class="list-heading">
+          <h2 id="listTitle">Prescrições</h2>
+          <div class="list-tools">
+            <select id="sortSelect" class="sort-select" aria-label="Ordenação">
+              <option value="recentes">Mais recentes</option>
+              <option value="antigos">Mais antigos</option>
+              <option value="az">A–Z</option>
+            </select>
+            <span class="item-count" id="itemCount">0 itens</span>
+          </div>
+        </div>
+
+        <div class="student-list" id="studentList">
+          <div class="loading-state">
+            <span class="loading-spinner" aria-hidden="true"></span>
+            Carregando anamneses
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <main class="demand-view" id="demandView" hidden>
+      <section class="demand-wizard" aria-labelledby="demandWizardTitle">
+        <div class="wizard-heading">
+          <p class="wizard-kicker">Nova demanda</p>
+          <h2 id="demandWizardTitle">Anamnese para treino personalizado</h2>
+          <p id="wizardDescription">Carregando formulário</p>
+        </div>
+        <div class="wizard-progress" aria-label="Progresso da anamnese">
+          <span id="wizardProgress" role="progressbar" aria-valuemin="1" aria-valuemax="6" aria-valuenow="1"></span>
+        </div>
+        <form id="demandWizard" novalidate>
+          <div id="wizardFields" class="wizard-fields"></div>
+          <div id="wizardReview" class="wizard-review" hidden></div>
+          <div class="wizard-actions">
+            <button id="wizardBack" class="wizard-secondary" type="button">Voltar</button>
+            <button id="wizardDiscard" class="wizard-secondary" type="button">Descartar rascunho</button>
+            <button id="wizardNext" class="save-button" type="button">Continuar</button>
+            <button id="wizardSubmit" class="save-button" type="submit" hidden>Enviar demanda</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <div class="prescription-modal" id="prescriptionModal" hidden>
+    <div class="modal-backdrop" data-action="close-modal"></div>
+    <section
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+      aria-describedby="modalSubtitle"
+    >
+      <header class="modal-header">
+        <div class="modal-heading">
+          <h2 id="modalTitle">Aluno</h2>
+          <p id="modalSubtitle"></p>
+        </div>
+        <div class="modal-header-actions">
+          <button
+            class="modal-expand-toggle"
+            id="modalExpandToggle"
+            data-action="toggle-sections"
+            type="button"
+            aria-label="Expandir todos os blocos"
+            title="Expandir todos os blocos"
+          >
+            <span aria-hidden="true">↕</span>
+          </button>
+          <button class="modal-close" id="modalClose" data-action="close-modal" type="button" aria-label="Fechar">
+            ×
+          </button>
+        </div>
+      </header>
+      <div class="modal-content" id="modalContent"></div>
+    </section>
+  </div>
+
+  <?!= include('scripts'); ?>
+</body>
+</html>

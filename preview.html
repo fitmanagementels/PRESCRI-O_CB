@@ -1,0 +1,3467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#05070d">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="application-name" content="XSTEAM Prescrições">
+  <meta name="apple-mobile-web-app-title" content="XSTEAM Prescrições">
+  <title>Acompanhamento de prescrições</title>
+  <style>
+  :root {
+    --bg: #05070d;
+    --bg-soft: #090c14;
+    --surface: #0d1220;
+    --surface-strong: #111827;
+    --surface-soft: #161d2c;
+    --text: #f7f8fb;
+    --muted: #96a1b5;
+    --muted-strong: #b6bfd0;
+    --line: rgba(255, 255, 255, 0.12);
+    --line-strong: rgba(255, 255, 255, 0.2);
+    --lime: #dfff32;
+    --lime-strong: #cfff00;
+    --lime-soft: rgba(223, 255, 50, 0.12);
+    --question-text: #a9bd49;
+    --green: #25d366;
+    --green-soft: rgba(37, 211, 102, 0.13);
+    --amber: #ff9f1c;
+    --amber-soft: rgba(255, 159, 28, 0.13);
+    --red: #ff5353;
+    --red-soft: rgba(255, 83, 83, 0.13);
+    --blue: #75a7ff;
+    --blue-soft: rgba(117, 167, 255, 0.13);
+    --radius-sm: 8px;
+    --radius: 12px;
+    --radius-lg: 16px;
+    --shadow: none;
+    --shadow-lime: none;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    min-height: 100%;
+    background: var(--bg);
+    color-scheme: dark;
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    overflow-x: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  button,
+  summary,
+  select,
+  input[type="checkbox"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  summary:focus-visible {
+    outline: 3px solid var(--lime);
+    outline-offset: 2px;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  .svg-symbols {
+    width: 0;
+    height: 0;
+    position: absolute;
+    overflow: hidden;
+  }
+
+  .boot-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
+    position: fixed;
+    z-index: 2000;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: var(--space-3);
+    background: var(--bg);
+    padding: var(--space-5);
+    text-align: center;
+    transition: opacity 180ms ease;
+  }
+
+  .boot-screen.is-finishing {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .boot-logo {
+    width: 96px;
+    height: 96px;
+    display: block;
+    margin-bottom: var(--space-2);
+  }
+
+  .boot-title {
+    font-size: 20px;
+    font-weight: 900;
+  }
+
+  .boot-status {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .boot-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: var(--space-2);
+  }
+
+  .boot-bar {
+    width: min(220px, 64vw);
+    height: 5px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .boot-bar span {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--lime);
+    transition: width 160ms linear;
+  }
+
+  .boot-percent {
+    width: 34px;
+    color: var(--muted-strong);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    text-align: right;
+  }
+
+  .app-shell {
+    width: min(100%, 880px);
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: max(20px, env(safe-area-inset-top)) 20px max(48px, env(safe-area-inset-bottom));
+  }
+
+  .topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+
+  .brand-row {
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .brand-logo {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    display: block;
+    color: var(--lime);
+  }
+
+  .brand-copy {
+    min-width: 0;
+  }
+
+  .brand-copy h1 {
+    max-width: 560px;
+    margin: 0;
+    font-family: "Arial Narrow", Impact, "Arial Black", sans-serif;
+    font-size: clamp(23px, 4.7vw, 32px);
+    font-weight: 950;
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+  }
+
+  .brand-copy p {
+    margin: 7px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .refresh-button,
+  .save-button {
+    min-height: 44px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--lime-strong);
+    color: #080b02;
+    padding: 0 17px;
+    cursor: pointer;
+    font-weight: 900;
+    box-shadow: none;
+    transition: transform 120ms ease, opacity 120ms ease;
+  }
+
+  .refresh-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .refresh-button:hover,
+  .save-button:hover {
+    transform: translateY(-1px);
+    box-shadow: none;
+  }
+
+  .refresh-button:disabled,
+  .save-button:disabled {
+    cursor: wait;
+    opacity: 0.62;
+    transform: none;
+  }
+
+  .refresh-icon {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .notice {
+    margin-bottom: var(--space-4);
+    border: 1px solid rgba(223, 255, 50, 0.3);
+    border-radius: var(--radius);
+    background: var(--lime-soft);
+    color: var(--text);
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .app-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 4px 0 18px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .app-tab,
+  .wizard-secondary {
+    min-height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    padding: 0 15px;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .app-tab.is-active {
+    background: var(--lime-strong);
+    border-color: var(--lime-strong);
+    color: #080b02;
+  }
+
+  .demand-view {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .demand-wizard {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--panel);
+    padding: clamp(18px, 4vw, 30px);
+  }
+
+  .wizard-heading h2 { margin: 4px 0 8px; font-size: clamp(23px, 5vw, 30px); line-height: 1.08; }
+  .wizard-heading p { margin: 0; color: var(--muted); }
+  .wizard-kicker { color: var(--lime) !important; font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+  .wizard-progress { height: 7px; margin: 22px 0; border-radius: 99px; background: rgba(255,255,255,.11); overflow: hidden; }
+  .wizard-progress span { display: block; width: 0; height: 100%; background: var(--lime-strong); transition: width 160ms ease; }
+  .wizard-fields { display: grid; gap: 16px; }
+  .wizard-field { display: grid; gap: 8px; border: 0; padding: 0; margin: 0; }
+  .wizard-field label, .wizard-field legend { font-size: 15px; font-weight: 800; color: var(--text); }
+  .wizard-field em { color: var(--lime); font-style: normal; }
+  .wizard-field input, .wizard-field textarea {
+    width: 100%; min-height: 48px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 12px;
+    background: rgba(255,255,255,.04); color: var(--text); padding: 12px; font: inherit; font-size: 16px;
+  }
+  .wizard-field textarea { min-height: 112px; resize: vertical; }
+  .custom-select { position: relative; z-index: 1; }
+  .custom-select.is-open { z-index: 3; }
+  .custom-select-trigger {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    width: 100%; min-height: 48px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 12px;
+    background: rgba(255,255,255,.04); color: var(--text); padding: 12px; font: inherit; font-size: 16px;
+    text-align: left; cursor: pointer;
+  }
+  .custom-select-trigger:hover { border-color: rgba(223,255,50,.55); background: rgba(223,255,50,.05); }
+  .custom-select-trigger:focus-visible { outline: 3px solid var(--lime); outline-offset: 2px; border-color: var(--lime-strong); }
+  .custom-select-chevron { color: var(--lime); font-size: 20px; line-height: 1; transition: transform 140ms ease; }
+  .custom-select.is-open .custom-select-chevron { transform: rotate(180deg); }
+  .custom-select-menu {
+    position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; right: 0;
+    max-height: min(310px, 48vh); overflow: auto; margin: 0; padding: 6px;
+    border: 1px solid rgba(223,255,50,.48); border-radius: 12px; background: #10150c;
+    box-shadow: 0 18px 42px rgba(0,0,0,.46); list-style: none;
+  }
+  .custom-select-menu[hidden] { display: none; }
+  .custom-select-menu li { margin: 0; }
+  .custom-select-menu button {
+    width: 100%; min-height: 44px; border: 0; border-radius: 8px; background: transparent;
+    color: var(--text); padding: 10px 12px; font: inherit; font-size: 16px; text-align: left; cursor: pointer;
+  }
+  .custom-select-menu button:hover, .custom-select-menu button:focus-visible { background: rgba(223,255,50,.16); color: var(--lime-strong); outline: none; }
+  .custom-select-menu button[aria-selected="true"] { background: var(--lime-strong); color: #080b02; font-weight: 900; }
+  .wizard-choice, .wizard-consent { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); cursor: pointer; }
+  .wizard-choice input, .wizard-consent input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--lime-strong); }
+  .wizard-consent { margin-top: 6px; align-items: flex-start; line-height: 1.35; }
+  .wizard-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 26px; }
+  .wizard-actions .save-button { min-height: 48px; grid-column: span 2; }
+  .wizard-review { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .wizard-review h3 { margin: 0 0 12px; }
+  .wizard-review div { display: grid; gap: 3px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+  .wizard-review strong { color: var(--question-text); font-size: 13px; }
+  .wizard-review span { font-size: 16px; }
+  .wizard-review-step { margin-top: 0; padding-top: 0; border-top: 0; }
+
+  .notice.error {
+    border-color: rgba(255, 83, 83, 0.4);
+    background: var(--red-soft);
+    color: #ffc1c1;
+  }
+
+  .filters-section {
+    margin-bottom: var(--space-4);
+  }
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+
+  .field label,
+  .process-label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--lime);
+    font-size: 11px;
+    font-weight: 950;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .field input,
+  .field select,
+  .date-input,
+  .sort-select {
+    width: 100%;
+    min-height: 50px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: rgba(10, 14, 24, 0.9);
+    color: var(--text);
+    padding: 0 14px;
+    outline: none;
+    font-weight: 750;
+    transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  }
+
+  .field input:focus,
+  .field select:focus,
+  .date-input:focus,
+  .sort-select:focus {
+    border-color: var(--lime);
+    box-shadow: 0 0 0 3px rgba(223, 255, 50, 0.13), 0 0 24px rgba(223, 255, 50, 0.08);
+  }
+
+  .field input::placeholder {
+    color: #6e7a90;
+  }
+
+  .search-control {
+    position: relative;
+  }
+
+  .search-control input {
+    padding-right: 48px;
+  }
+
+  .search-icon {
+    position: absolute;
+    top: 50%;
+    right: 16px;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 24px;
+    pointer-events: none;
+  }
+
+  select {
+    color-scheme: dark;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin: 18px 0 34px;
+  }
+
+  .metric-card {
+    position: relative;
+    min-height: 106px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: linear-gradient(145deg, rgba(17, 24, 39, 0.98), rgba(10, 14, 24, 0.98));
+    color: inherit;
+    padding: 17px 16px 14px;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+  }
+
+  .metric-card::before,
+  .metric-card::after {
+    content: "";
+    position: absolute;
+    background: var(--metric-color, var(--lime));
+    box-shadow: none;
+  }
+
+  .metric-card::before {
+    top: 14px;
+    bottom: 30px;
+    left: 0;
+    width: 5px;
+    border-radius: 0 999px 999px 0;
+  }
+
+  .metric-card::after {
+    right: 15px;
+    bottom: 0;
+    left: 18px;
+    height: 5px;
+    border-radius: 999px 999px 0 0;
+  }
+
+  .metric-card:hover,
+  .metric-card.active {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--metric-color, var(--lime)) 72%, transparent);
+    box-shadow: none;
+  }
+
+  .metric-card.total { --metric-color: var(--lime); }
+  .metric-card.a-transferir { --metric-color: var(--amber); }
+  .metric-card.pendentes { --metric-color: var(--lime); }
+  .metric-card.prescritos { --metric-color: var(--green); }
+
+  .metric-value {
+    display: block;
+    color: #fff;
+    font-family: "Arial Narrow", Impact, "Arial Black", sans-serif;
+    font-size: 40px;
+    font-weight: 950;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .metric-label {
+    display: block;
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 650;
+  }
+
+  .list-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .list-heading h2 {
+    margin: 0;
+    color: var(--muted-strong);
+    font-size: 14px;
+    font-weight: 750;
+  }
+
+  .list-tools {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .sort-select {
+    width: auto;
+    min-height: 36px;
+    border-color: rgba(223, 255, 50, 0.36);
+    border-radius: 999px;
+    background: var(--lime-soft);
+    color: var(--lime);
+    padding: 0 34px 0 13px;
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .item-count {
+    color: var(--muted);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .student-list {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .student-card {
+    --status-color: var(--amber);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(223, 255, 50, 0.25);
+    border-radius: var(--radius);
+    background: rgba(13, 18, 32, 0.96);
+    box-shadow: var(--shadow);
+  }
+
+  .student-card.status-pendente {
+    --status-color: var(--lime);
+  }
+
+  .student-card.status-prescrito {
+    --status-color: var(--green);
+  }
+
+  .student-card::before {
+    content: "";
+    position: absolute;
+    top: 14px;
+    bottom: 14px;
+    left: 0;
+    z-index: 2;
+    width: 4px;
+    border-radius: 0 999px 999px 0;
+    background: var(--status-color);
+    box-shadow: none;
+  }
+
+  .student-summary {
+    min-height: 100px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 11px;
+    padding: 16px 15px 16px 24px;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .student-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .student-main {
+    min-width: 0;
+  }
+
+  .student-name {
+    display: block;
+    overflow: hidden;
+    color: #fff;
+    font-family: "Arial Narrow", Impact, "Arial Black", sans-serif;
+    font-size: 20px;
+    font-weight: 950;
+    line-height: 1.18;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+  }
+
+  .student-subtitle {
+    display: block;
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 650;
+  }
+
+  .status-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 8px;
+  }
+
+  .status-name {
+    color: var(--status-color);
+    font-weight: 900;
+  }
+
+  .days-pill {
+    min-width: 62px;
+    min-height: 34px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--status-color) 54%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--status-color) 13%, transparent);
+    color: color-mix(in srgb, var(--status-color) 72%, white);
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  .card-chevron {
+    color: var(--muted);
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1;
+    transition: transform 160ms ease, color 160ms ease;
+  }
+
+  .student-card[open] .card-chevron {
+    transform: rotate(90deg);
+    color: var(--lime);
+  }
+
+  .student-card[open] .student-summary {
+    border-bottom: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  .card-body {
+    padding: 14px 14px 18px 24px;
+  }
+
+  .process-panel {
+    margin-bottom: var(--space-5);
+  }
+
+  .section-kicker {
+    margin: 0 0 12px;
+    color: var(--lime);
+    font-size: 12px;
+    font-weight: 950;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+  }
+
+  .professional-box {
+    display: grid;
+    gap: 3px;
+    margin-bottom: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.025);
+    padding: 13px 14px;
+  }
+
+  .professional-box span {
+    color: var(--lime);
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .professional-box strong {
+    color: #fff;
+    font-size: 16px;
+  }
+
+  .process-grid {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .toggle-control {
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: rgba(8, 11, 19, 0.7);
+    padding: 10px 12px;
+    cursor: pointer;
+  }
+
+  .toggle-control input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .toggle-visual {
+    flex: 0 0 auto;
+    width: 48px;
+    height: 28px;
+    position: relative;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: #1b2231;
+    transition: background 140ms ease, border-color 140ms ease;
+  }
+
+  .toggle-visual::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #8f9aad;
+    transition: transform 140ms ease, background 140ms ease;
+  }
+
+  .toggle-control input:checked + .toggle-visual {
+    border-color: rgba(223, 255, 50, 0.56);
+    background: rgba(223, 255, 50, 0.2);
+  }
+
+  .toggle-control input:focus-visible + .toggle-visual {
+    outline: 3px solid var(--lime);
+    outline-offset: 3px;
+  }
+
+  .toggle-control input:checked + .toggle-visual::after {
+    transform: translateX(20px);
+    background: var(--lime);
+    box-shadow: none;
+  }
+
+  .toggle-text {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+
+  .toggle-text strong {
+    color: #fff;
+    font-size: 14px;
+  }
+
+  .toggle-text small {
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .date-field {
+    margin-top: var(--space-3);
+  }
+
+  .date-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.46;
+  }
+
+  .card-actions {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+
+  .save-state {
+    min-width: 0;
+    flex: 1;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .save-state.error {
+    color: #ffaaaa;
+  }
+
+  .save-state.success {
+    color: #84f6ab;
+  }
+
+  .save-button {
+    min-width: 92px;
+  }
+
+  .prescription-info-button {
+    width: 100%;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    border: 1px solid rgba(223, 255, 50, 0.42);
+    border-radius: 999px;
+    background: rgba(223, 255, 50, 0.055);
+    color: var(--lime);
+    padding: 0 16px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 900;
+    text-align: left;
+  }
+
+  .prescription-info-button:hover,
+  .prescription-info-button:focus-visible {
+    border-color: var(--lime);
+    background: rgba(223, 255, 50, 0.1);
+  }
+
+  body.modal-open {
+    overflow: hidden;
+  }
+
+  body.modal-open .app-shell {
+    visibility: hidden;
+  }
+
+  .prescription-modal[hidden] {
+    display: none !important;
+  }
+
+  .prescription-modal {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 10px;
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: #020308;
+  }
+
+  .modal-card {
+    width: min(100%, 760px);
+    max-height: calc(100dvh - 20px);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(223, 255, 50, 0.38);
+    border-radius: 10px;
+    background: #0d1220;
+    box-shadow: none;
+  }
+
+  .modal-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    border-bottom: 1px solid var(--line);
+    background: #0d1220;
+    padding: 17px 16px 15px 18px;
+  }
+
+  .modal-heading {
+    min-width: 0;
+  }
+
+  .modal-heading h2 {
+    margin: 0;
+    color: #fff;
+    font-size: 20px;
+    line-height: 1.15;
+  }
+
+  .modal-heading p {
+    margin: 6px 0 0;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+  }
+
+  .modal-header-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .modal-close,
+  .modal-expand-toggle {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(223, 255, 50, 0.48);
+    border-radius: 50%;
+    background: rgba(223, 255, 50, 0.055);
+    color: var(--lime);
+    cursor: pointer;
+    font-size: 25px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .modal-expand-toggle {
+    font-size: 21px;
+  }
+
+  .modal-expand-toggle.all-open {
+    background: rgba(223, 255, 50, 0.13);
+  }
+
+  .modal-expand-toggle:disabled {
+    cursor: wait;
+    opacity: 0.42;
+  }
+
+  .modal-content {
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y pinch-zoom;
+    contain: paint;
+    scrollbar-color: #8c8f91 #242832;
+    scrollbar-width: thin;
+    padding: 18px;
+  }
+
+  .modal-section-heading {
+    margin: 0 0 12px;
+    color: var(--lime);
+    font-size: 11px;
+    font-weight: 950;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .modal-loading {
+    min-height: 220px;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 12px;
+    color: var(--muted-strong);
+    font-size: 13px;
+  }
+
+  .anamnesis-section {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: #090d17;
+  }
+
+  .anamnesis-section + .anamnesis-section {
+    margin-top: var(--space-2);
+  }
+
+  .anamnesis-title {
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: 11px 13px;
+    cursor: pointer;
+    list-style: none;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  .anamnesis-title::-webkit-details-marker {
+    display: none;
+  }
+
+  .anamnesis-title::after {
+    content: "+";
+    color: var(--lime);
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .anamnesis-section[open] .anamnesis-title::after {
+    content: "−";
+  }
+
+  .answer-list {
+    display: grid;
+    gap: 0;
+    border-top: 1px solid var(--line);
+    padding: 0 13px 6px;
+  }
+
+  .answer-item {
+    min-width: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+    background: transparent;
+    padding: 13px 0;
+  }
+
+  .answer-item:last-child {
+    border-bottom: 0;
+  }
+
+  .answer-label {
+    display: block;
+    color: var(--question-text);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .answer-value {
+    display: block;
+    margin-top: 5px;
+    overflow-wrap: anywhere;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 650;
+    white-space: pre-wrap;
+  }
+
+  .chips {
+    display: block;
+    margin-top: 5px;
+  }
+
+  .chip {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    padding: 0;
+    font-size: 14px;
+    font-weight: 650;
+  }
+
+  .chip + .chip::before {
+    content: ", ";
+  }
+
+  .empty-state,
+  .error-state,
+  .loading-state {
+    min-height: 148px;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 10px;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--muted);
+    padding: var(--space-5);
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .error-state {
+    border-color: rgba(255, 83, 83, 0.36);
+    color: #ffb9b9;
+  }
+
+  .loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(255, 255, 255, 0.12);
+    border-top-color: var(--lime);
+    border-radius: 50%;
+    animation: spin 700ms linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (min-width: 680px) {
+    .app-shell {
+      padding-right: 28px;
+      padding-left: 28px;
+    }
+
+    .filters-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .metrics-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .process-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .date-field {
+      max-width: 320px;
+    }
+
+    .answer-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 24px;
+    }
+
+    .answer-item.answer-wide {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 600px) {
+
+    .app-tabs { margin-bottom: 15px; }
+    .app-tab { min-height: 48px; }
+    .demand-wizard { margin-right: -2px; margin-left: -2px; padding: 18px 15px max(20px, env(safe-area-inset-bottom)); }
+    .wizard-actions { grid-template-columns: 1fr; }
+    .wizard-actions .save-button { grid-column: auto; }
+    :root {
+      --mobile-control-height: 48px;
+    }
+
+    body {
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .app-shell {
+      width: 100%;
+      padding: max(14px, env(safe-area-inset-top)) 14px max(32px, env(safe-area-inset-bottom));
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr;
+      align-items: start;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .brand-row {
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+    }
+
+    .brand-copy h1 {
+      font-size: clamp(22px, 6.4vw, 25px);
+      line-height: 1.08;
+    }
+
+    .brand-copy p {
+      margin-top: 4px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .refresh-button {
+      width: 100%;
+      min-width: 48px;
+      min-height: 48px;
+      justify-content: center;
+      margin: 0;
+      padding: 0 14px;
+      font-size: 14px;
+    }
+
+    .notice {
+      margin-bottom: 12px;
+      padding: 11px 12px;
+      font-size: 14px;
+    }
+
+    .filters-section {
+      margin-bottom: 16px;
+    }
+
+    .filters-grid {
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .field label,
+    .process-label {
+      margin-bottom: 5px;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .field input,
+    .field select,
+    .date-input,
+    .sort-select {
+      min-height: var(--mobile-control-height);
+      padding-right: 12px;
+      padding-left: 12px;
+      font-size: 16px;
+    }
+
+    .search-control input {
+      padding-right: 50px;
+    }
+
+    .metrics-grid {
+      gap: 10px;
+      margin: 16px 0 20px;
+    }
+
+    .metric-card {
+      min-height: 96px;
+      padding: 14px 14px 12px;
+    }
+
+    .metric-value {
+      font-size: 35px;
+    }
+
+    .metric-label {
+      margin-top: 6px;
+      font-size: 13px;
+    }
+
+    .list-heading {
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .list-heading h2 {
+      font-size: 15px;
+    }
+
+    .list-tools {
+      width: 100%;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .sort-select {
+      width: auto;
+      min-height: 48px;
+      font-size: 14px;
+    }
+
+    .item-count {
+      font-size: 13px;
+    }
+
+    .student-list {
+      gap: 12px;
+    }
+
+    .student-summary {
+      min-height: 100px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "main chevron"
+        "days chevron";
+      gap: 8px 10px;
+      padding: 14px 12px 14px 18px;
+    }
+
+    .student-main {
+      grid-area: main;
+    }
+
+    .student-name {
+      overflow: visible;
+      font-size: 18px;
+      line-height: 1.2;
+      text-overflow: clip;
+      white-space: normal;
+    }
+
+    .student-subtitle {
+      margin-top: 5px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .days-pill {
+      grid-area: days;
+      justify-self: start;
+      min-height: 34px;
+      padding: 0 10px;
+      font-size: 13px;
+    }
+
+    .card-chevron {
+      grid-area: chevron;
+      align-self: center;
+      font-size: 28px;
+    }
+
+    .card-body {
+      padding: 14px 12px 16px 18px;
+    }
+
+    .section-kicker {
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+
+    .professional-box {
+      padding: 12px;
+    }
+
+    .professional-box span {
+      font-size: 13px;
+    }
+
+    .professional-box strong {
+      font-size: 16px;
+    }
+
+    .process-grid {
+      gap: 10px;
+    }
+
+    .toggle-control {
+      min-height: 60px;
+      padding: 10px;
+    }
+
+    .toggle-text strong {
+      font-size: 15px;
+    }
+
+    .toggle-text small {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .date-field {
+      margin-top: 12px;
+    }
+
+    .card-actions {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr;
+      justify-content: stretch;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .save-state {
+      min-height: 20px;
+      font-size: 13px;
+    }
+
+    .save-button {
+      width: 100%;
+      min-height: 48px;
+      font-size: 15px;
+    }
+
+    .prescription-info-button {
+      min-height: 48px;
+      margin-top: 10px;
+      font-size: 15px;
+    }
+
+    .prescription-modal {
+      place-items: stretch;
+      padding: 0;
+    }
+
+    .modal-card {
+      width: 100%;
+      height: 100dvh;
+      max-height: none;
+      border-width: 0;
+      border-radius: 0;
+    }
+
+    .modal-header {
+      padding: max(12px, env(safe-area-inset-top)) 12px 12px 14px;
+    }
+
+    .modal-heading h2 {
+      font-size: 19px;
+    }
+
+    .modal-heading p {
+      font-size: 13px;
+    }
+
+    .modal-close,
+    .modal-expand-toggle {
+      width: 48px;
+      height: 48px;
+    }
+
+    .modal-content {
+      padding: 14px 14px max(20px, env(safe-area-inset-bottom));
+    }
+
+    .modal-section-heading {
+      font-size: 13px;
+    }
+
+    .anamnesis-section + .anamnesis-section {
+      margin-top: 8px;
+    }
+
+    .anamnesis-title {
+      min-height: 48px;
+      padding: 11px 12px;
+      font-size: 14px;
+    }
+
+    .answer-list {
+      gap: 0;
+      padding: 0 12px 5px;
+    }
+
+    .answer-item {
+      padding: 10px 0;
+    }
+
+    .answer-label {
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .answer-value {
+      margin-top: 5px;
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .chip {
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .empty-state,
+    .error-state,
+    .loading-state {
+      font-size: 14px;
+    }
+  }
+
+  @media (max-width: 370px) {
+    .app-shell {
+      padding-right: 12px;
+      padding-left: 12px;
+    }
+
+    .brand-row {
+      gap: 9px;
+    }
+
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+    }
+
+    .brand-copy h1 {
+      font-size: 22px;
+    }
+
+    .refresh-button {
+      padding-right: 11px;
+      padding-left: 11px;
+    }
+
+    .metric-card {
+      padding-right: 13px;
+      padding-left: 13px;
+    }
+
+    .student-summary {
+      padding-left: 17px;
+    }
+
+    .card-body {
+      padding-left: 17px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+
+</head>
+<body>
+  <svg class="svg-symbols" aria-hidden="true">
+    <symbol id="xsteamLogo" viewBox="0 0 447 447">
+      <path d="M 319.37 315.20 C318.56,316.52 96.00,316.18 96.00,314.86 C96.00,313.79 98.34,311.25 122.06,286.51 C127.87,280.46 143.66,263.80 157.15,249.50 L 181.68 223.50 L 178.98 219.00 C177.49,216.52 168.28,201.00 158.51,184.50 C148.74,168.00 137.68,149.32 133.93,143.00 L 127.10 131.50 L 183.55 131.24 C214.60,131.10 265.41,131.10 296.46,131.24 L 352.91 131.50 L 342.33 143.50 C295.43,196.65 276.30,218.44 273.21,222.22 C271.88,223.85 271.91,223.91 294.82,267.00 C313.49,302.11 319.80,314.51 319.37,315.20 ZM 192.00 312.57 C192.00,313.85 194.64,311.10 207.66,296.22 C215.23,287.58 225.04,276.44 229.46,271.47 C233.88,266.51 240.20,259.34 243.50,255.54 C246.80,251.75 254.31,243.21 260.19,236.57 L 270.88 224.50 L 250.44 224.23 C239.20,224.08 230.00,223.56 230.00,223.06 C230.00,222.57 231.55,218.64 233.43,214.33 C235.32,210.03 240.97,196.82 245.98,185.00 L 258.69 155.00 C260.68,150.32 263.42,143.90 264.79,140.73 C266.17,137.56 267.07,134.74 266.80,134.47 C266.53,134.20 256.23,144.65 243.90,157.69 C231.58,170.73 212.84,190.53 202.25,201.69 C191.66,212.85 183.00,222.43 183.00,222.99 C183.00,223.64 191.17,224.00 206.00,224.00 C218.65,224.00 229.00,224.18 229.00,224.40 C229.00,224.61 227.70,227.88 226.11,231.65 C220.17,245.77 203.54,284.99 197.88,298.26 C194.64,305.83 192.00,312.27 192.00,312.57 Z" fill="rgb(0,1,1)"/>
+      <path d="M 0.00 223.50 L 0.00 0.00 L 223.50 0.00 L 447.00 0.00 L 447.00 223.50 L 447.00 447.00 L 223.50 447.00 L 0.00 447.00 L 0.00 223.50 ZM 319.37 315.20 C319.80,314.51 313.49,302.11 294.82,267.00 C271.91,223.91 271.88,223.85 273.21,222.22 C276.30,218.44 295.43,196.65 342.33,143.50 L 352.91 131.50 L 296.46 131.24 C265.41,131.10 214.60,131.10 183.55,131.24 L 127.10 131.50 L 133.93 143.00 C137.68,149.32 148.74,168.00 158.51,184.50 C168.28,201.00 177.49,216.52 178.98,219.00 L 181.68 223.50 L 157.15 249.50 C143.66,263.80 127.87,280.46 122.06,286.51 C98.34,311.25 96.00,313.79 96.00,314.86 C96.00,316.18 318.56,316.52 319.37,315.20 ZM 192.00 312.57 C192.00,312.27 194.64,305.83 197.88,298.26 C203.54,284.99 220.17,245.77 226.11,231.65 C227.70,227.88 229.00,224.61 229.00,224.40 C229.00,224.18 218.65,224.00 206.00,224.00 C191.17,224.00 183.00,223.64 183.00,222.99 C183.00,222.43 191.66,212.85 202.25,201.69 C212.84,190.53 231.58,170.73 243.90,157.69 C256.23,144.65 266.53,134.20 266.80,134.47 C267.07,134.74 266.17,137.56 264.79,140.73 C263.42,143.90 260.68,150.32 258.69,155.00 C256.71,159.68 250.99,173.18 245.98,185.00 C240.97,196.82 235.32,210.03 233.43,214.33 C231.55,218.64 230.00,222.57 230.00,223.06 C230.00,223.56 239.20,224.08 250.44,224.23 L 270.88 224.50 L 260.19 236.57 C254.31,243.21 246.80,251.75 243.50,255.54 C240.20,259.34 233.88,266.51 229.46,271.47 C225.04,276.44 215.23,287.58 207.66,296.22 C194.64,311.10 192.00,313.85 192.00,312.57 Z" fill="rgb(223,251,69)"/>
+    </symbol>
+    <symbol id="cbFitnessHeaderLogo" viewBox="0 0 447 447">
+      <rect x="22" y="22" width="403" height="403" rx="72" fill="none" stroke="currentColor" stroke-width="16" opacity="0.68"/>
+      <path d="M 319.37 315.20 C318.56,316.52 96.00,316.18 96.00,314.86 C96.00,313.79 98.34,311.25 122.06,286.51 C127.87,280.46 143.66,263.80 157.15,249.50 L 181.68 223.50 L 178.98 219.00 C177.49,216.52 168.28,201.00 158.51,184.50 C148.74,168.00 137.68,149.32 133.93,143.00 L 127.10 131.50 L 183.55 131.24 C214.60,131.10 265.41,131.10 296.46,131.24 L 352.91 131.50 L 342.33 143.50 C295.43,196.65 276.30,218.44 273.21,222.22 C271.88,223.85 271.91,223.91 294.82,267.00 C313.49,302.11 319.80,314.51 319.37,315.20 ZM 192.00 312.57 C192.00,313.85 194.64,311.10 207.66,296.22 C215.23,287.58 225.04,276.44 229.46,271.47 C233.88,266.51 240.20,259.34 243.50,255.54 C246.80,251.75 254.31,243.21 260.19,236.57 L 270.88 224.50 L 250.44 224.23 C239.20,224.08 230.00,223.56 230.00,223.06 C230.00,222.57 231.55,218.64 233.43,214.33 C235.32,210.03 240.97,196.82 245.98,185.00 L 258.69 155.00 C260.68,150.32 263.42,143.90 264.79,140.73 C266.17,137.56 267.07,134.74 266.80,134.47 C266.53,134.20 256.23,144.65 243.90,157.69 C231.58,170.73 212.84,190.53 202.25,201.69 C191.66,212.85 183.00,222.43 183.00,222.99 C183.00,223.64 191.17,224.00 206.00,224.00 C218.65,224.00 229.00,224.18 229.00,224.40 C229.00,224.61 227.70,227.88 226.11,231.65 C220.17,245.77 203.54,284.99 197.88,298.26 C194.64,305.83 192.00,312.27 192.00,312.57 Z" fill="currentColor"/>
+    </symbol>
+  </svg>
+
+  <div class="boot-screen" id="bootScreen" aria-live="polite">
+    <svg class="boot-logo" role="img" aria-label="XSTEAM">
+      <use href="#xsteamLogo"></use>
+    </svg>
+    <div class="boot-title">Acompanhamento de prescrições</div>
+    <div class="boot-status" id="bootStatus">Preparando o app</div>
+    <div class="boot-progress-row">
+      <div class="boot-bar" role="progressbar" aria-label="Inicialização" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span id="bootProgress"></span>
+      </div>
+      <span class="boot-percent" id="bootPercent">0%</span>
+    </div>
+  </div>
+
+  <div class="app-shell" id="appShell" hidden>
+    <header class="topbar">
+      <div class="brand-row">
+        <svg class="brand-logo" role="img" aria-label="CB Fitness">
+          <use href="#cbFitnessHeaderLogo"></use>
+        </svg>
+        <div class="brand-copy">
+          <h1>Prescrições da CB Fitness</h1>
+          <p id="updatedAt">Carregando dados</p>
+        </div>
+      </div>
+      <button class="refresh-button" id="refreshButton" type="button">
+        <span class="refresh-icon" aria-hidden="true">↻</span>
+        <span>Atualizar</span>
+      </button>
+    </header>
+
+    <nav class="app-tabs" aria-label="Seções do aplicativo">
+      <button class="app-tab is-active" type="button" data-app-view="acompanhamento" aria-selected="true">Acompanhar demandas</button>
+      <button class="app-tab" type="button" data-app-view="nova-demanda" aria-selected="false">Adicionar demanda</button>
+    </nav>
+
+    <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+
+    <main id="prescriptionsView">
+      <section class="filters-section" aria-label="Filtros de prescrições">
+        <div class="field field-search">
+          <label for="searchInput">Buscar aluno</label>
+          <div class="search-control">
+            <input
+              id="searchInput"
+              type="search"
+              inputmode="search"
+              autocomplete="off"
+              placeholder="Aluno ou Submission ID"
+            >
+            <span class="search-icon" aria-hidden="true">⌕</span>
+          </div>
+        </div>
+
+        <div class="filters-grid">
+          <div class="field">
+            <label for="professionalFilter">Profissional</label>
+            <select id="professionalFilter">
+              <option value="todos">Todos os profissionais</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="periodFilter">Período</label>
+            <select id="periodFilter">
+              <option value="ultimos_45">Últimos 45 dias</option>
+              <option value="geral">Todos</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics-grid" id="metrics" aria-label="Resumo das prescrições"></section>
+
+      <section class="list-section" aria-labelledby="listTitle">
+        <div class="list-heading">
+          <h2 id="listTitle">Prescrições</h2>
+          <div class="list-tools">
+            <select id="sortSelect" class="sort-select" aria-label="Ordenação">
+              <option value="recentes">Mais recentes</option>
+              <option value="antigos">Mais antigos</option>
+              <option value="az">A–Z</option>
+            </select>
+            <span class="item-count" id="itemCount">0 itens</span>
+          </div>
+        </div>
+
+        <div class="student-list" id="studentList">
+          <div class="loading-state">
+            <span class="loading-spinner" aria-hidden="true"></span>
+            Carregando anamneses
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <main class="demand-view" id="demandView" hidden>
+      <section class="demand-wizard" aria-labelledby="demandWizardTitle">
+        <div class="wizard-heading">
+          <p class="wizard-kicker">Nova demanda</p>
+          <h2 id="demandWizardTitle">Anamnese para treino personalizado</h2>
+          <p id="wizardDescription">Carregando formulário</p>
+        </div>
+        <div class="wizard-progress" aria-label="Progresso da anamnese">
+          <span id="wizardProgress" role="progressbar" aria-valuemin="1" aria-valuemax="6" aria-valuenow="1"></span>
+        </div>
+        <form id="demandWizard" novalidate>
+          <div id="wizardFields" class="wizard-fields"></div>
+          <div id="wizardReview" class="wizard-review" hidden></div>
+          <div class="wizard-actions">
+            <button id="wizardBack" class="wizard-secondary" type="button">Voltar</button>
+            <button id="wizardDiscard" class="wizard-secondary" type="button">Descartar rascunho</button>
+            <button id="wizardNext" class="save-button" type="button">Continuar</button>
+            <button id="wizardSubmit" class="save-button" type="submit" hidden>Enviar demanda</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <div class="prescription-modal" id="prescriptionModal" hidden>
+    <div class="modal-backdrop" data-action="close-modal"></div>
+    <section
+      class="modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+      aria-describedby="modalSubtitle"
+    >
+      <header class="modal-header">
+        <div class="modal-heading">
+          <h2 id="modalTitle">Aluno</h2>
+          <p id="modalSubtitle"></p>
+        </div>
+        <div class="modal-header-actions">
+          <button
+            class="modal-expand-toggle"
+            id="modalExpandToggle"
+            data-action="toggle-sections"
+            type="button"
+            aria-label="Expandir todos os blocos"
+            title="Expandir todos os blocos"
+          >
+            <span aria-hidden="true">↕</span>
+          </button>
+          <button class="modal-close" id="modalClose" data-action="close-modal" type="button" aria-label="Fechar">
+            ×
+          </button>
+        </div>
+      </header>
+      <div class="modal-content" id="modalContent"></div>
+    </section>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    const SNAPSHOT_KEY = 'prescricoes_resumo_v3';
+    const SNAPSHOT_MAX_AGE = 24 * 60 * 60 * 1000;
+    const DEMAND_DRAFT_KEY = 'prescricoes_anamnese_v2_rascunho';
+    const DEMAND_DRAFT_MAX_AGE = 6 * 60 * 60 * 1000;
+    const DEMAND_WIZARD_TITLE = 'Adicionar demanda';
+    const DEMAND_FIELD_FREQUENCY_LABEL = 'Frequência pretendida';
+
+    const state = {
+      registros: [],
+      profissionais: [],
+      periodos: [],
+      atualizadoEm: '',
+      busca: '',
+      profissional: 'todos',
+      periodo: 'ultimos_45',
+      categoria: 'total',
+      ordenacao: 'recentes',
+      carregando: false,
+      previewPayload: null,
+      noticeTimer: null,
+      modalRegistroId: '',
+      ultimoFoco: null,
+      bootInicio: 0,
+      bootProgresso: 0,
+      bootTimer: null,
+      revelacaoAgendada: false,
+      appRevelado: false,
+      prefetchTimer: null,
+      prefetchEmAndamento: false,
+      carregamentosAnamnese: {},
+      activeView: 'acompanhamento',
+      questionario: null,
+      demandStep: 1,
+      demandDraft: null,
+      demandSubmitting: false,
+    };
+
+    const elements = {
+      bootScreen: document.getElementById('bootScreen'),
+      bootStatus: document.getElementById('bootStatus'),
+      bootProgress: document.getElementById('bootProgress'),
+      bootPercent: document.getElementById('bootPercent'),
+      bootBar: document.querySelector('.boot-bar'),
+      appShell: document.getElementById('appShell'),
+      updatedAt: document.getElementById('updatedAt'),
+      refreshButton: document.getElementById('refreshButton'),
+      notice: document.getElementById('notice'),
+      searchInput: document.getElementById('searchInput'),
+      professionalFilter: document.getElementById('professionalFilter'),
+      periodFilter: document.getElementById('periodFilter'),
+      sortSelect: document.getElementById('sortSelect'),
+      metrics: document.getElementById('metrics'),
+      listTitle: document.getElementById('listTitle'),
+      itemCount: document.getElementById('itemCount'),
+      studentList: document.getElementById('studentList'),
+      prescriptionModal: document.getElementById('prescriptionModal'),
+      modalClose: document.getElementById('modalClose'),
+      modalExpandToggle: document.getElementById('modalExpandToggle'),
+      modalTitle: document.getElementById('modalTitle'),
+      modalSubtitle: document.getElementById('modalSubtitle'),
+      modalContent: document.getElementById('modalContent'),
+      appTabs: Array.prototype.slice.call(document.querySelectorAll('[data-app-view]')),
+      prescriptionsView: document.getElementById('prescriptionsView'),
+      demandView: document.getElementById('demandView'),
+      demandWizard: document.getElementById('demandWizard'),
+      wizardFields: document.getElementById('wizardFields'),
+      wizardReview: document.getElementById('wizardReview'),
+      wizardProgress: document.getElementById('wizardProgress'),
+      wizardDescription: document.getElementById('wizardDescription'),
+      wizardBack: document.getElementById('wizardBack'),
+      wizardDiscard: document.getElementById('wizardDiscard'),
+      wizardNext: document.getElementById('wizardNext'),
+      wizardSubmit: document.getElementById('wizardSubmit'),
+    };
+
+    iniciarTelaInicial();
+    configurarEventos();
+    inicializarAplicativo();
+
+    function iniciarTelaInicial() {
+      state.bootInicio = window.performance && performance.now
+        ? performance.now()
+        : Date.now();
+      atualizarProgressoInicial(6);
+      state.bootTimer = window.setInterval(function () {
+        const atual = state.bootProgresso;
+        const incremento = atual < 55 ? 7 : (atual < 80 ? 3 : 0.7);
+        atualizarProgressoInicial(Math.min(92, atual + incremento));
+      }, 120);
+    }
+
+    function atualizarProgressoInicial(valor) {
+      const progresso = Math.max(0, Math.min(100, Math.round(valor)));
+      state.bootProgresso = progresso;
+      elements.bootProgress.style.width = progresso + '%';
+      elements.bootPercent.textContent = progresso + '%';
+      elements.bootBar.setAttribute('aria-valuenow', String(progresso));
+    }
+
+    function inicializarAplicativo() {
+      const snapshot = carregarSnapshotLocal();
+      if (snapshot) {
+        aplicarPayload(snapshot);
+        revelarAplicativo();
+        definirEstadoBotaoAtualizar(false);
+        carregarDados(false, true);
+        return;
+      }
+      carregarDados(false, false);
+    }
+
+    function configurarEventos() {
+      elements.appTabs.forEach(function (botao) {
+        botao.addEventListener('click', function () { abrirAbaAplicativo(botao.dataset.appView); });
+      });
+      elements.refreshButton.addEventListener('click', function () {
+        carregarDados(true);
+      });
+
+      elements.searchInput.addEventListener('input', function (event) {
+        state.busca = normalizarTexto(event.target.value);
+        renderizarTudo();
+      });
+
+      elements.professionalFilter.addEventListener('change', function (event) {
+        state.profissional = event.target.value;
+        renderizarTudo();
+      });
+
+      elements.periodFilter.addEventListener('change', function (event) {
+        state.periodo = event.target.value;
+        renderizarTudo();
+      });
+
+      elements.sortSelect.addEventListener('change', function (event) {
+        state.ordenacao = event.target.value;
+        renderizarTudo();
+      });
+
+      elements.metrics.addEventListener('click', function (event) {
+        const botao = event.target.closest('[data-category]');
+        if (!botao) {
+          return;
+        }
+        state.categoria = botao.dataset.category || 'total';
+        renderizarTudo();
+      });
+
+      elements.studentList.addEventListener('change', tratarAlteracaoCard);
+      elements.studentList.addEventListener('click', tratarCliqueCard);
+      elements.prescriptionModal.addEventListener('click', function (event) {
+        if (event.target.closest('[data-action="close-modal"]')) {
+          fecharModalPrescricao();
+          return;
+        }
+        if (event.target.closest('[data-action="toggle-sections"]')) {
+          alternarSecoesModal();
+        }
+      });
+
+      elements.modalContent.addEventListener('toggle', function (event) {
+        if (event.target.matches('.anamnesis-section')) {
+          atualizarBotaoSecoesModal();
+        }
+      }, true);
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !elements.prescriptionModal.hidden) {
+          fecharModalPrescricao();
+        }
+      });
+
+      window.addEventListener('offline', function () {
+        mostrarAviso('Sem conexão. Os dados abertos continuam visíveis, mas não será possível salvar.', true, false);
+      });
+      window.addEventListener('online', function () {
+        mostrarAviso('Conexão restaurada.', false, true);
+      });
+
+      elements.demandWizard.addEventListener('input', salvarRascunhoDemanda);
+      elements.demandWizard.addEventListener('change', salvarRascunhoDemanda);
+      elements.demandWizard.addEventListener('click', tratarCliqueSelectCustom);
+      elements.demandWizard.addEventListener('keydown', tratarTecladoSelectCustom);
+      document.addEventListener('click', function (event) {
+        if (!event.target.closest('.custom-select')) fecharSelectsCustom();
+      });
+      elements.wizardBack.addEventListener('click', function () { mudarEtapaDemanda(-1); });
+      elements.wizardNext.addEventListener('click', function () { mudarEtapaDemanda(1); });
+      elements.wizardDiscard.addEventListener('click', descartarRascunhoDemanda);
+      elements.demandWizard.addEventListener('submit', enviarDemandaWizard);
+    }
+
+    function carregarDados(forcarAtualizacao, silencioso) {
+      if (state.carregando) {
+        return;
+      }
+
+      state.carregando = true;
+      definirEstadoBotaoAtualizar(true);
+      if (!forcarAtualizacao && !silencioso) {
+        elements.bootStatus.textContent = 'Sincronizando anamneses';
+      } else if (forcarAtualizacao) {
+        elements.studentList.setAttribute('aria-busy', 'true');
+      }
+
+      const funcao = forcarAtualizacao
+        ? 'atualizarMonitoramentoEObterDados'
+        : 'getDadosPrescricoes';
+
+      executarAppsScript(funcao)
+        .then(function (payload) {
+          aplicarPayload(payload || {});
+          salvarSnapshotLocal(payload || {});
+          revelarAplicativo();
+          agendarPrecarregamentoAnamneses();
+          if (forcarAtualizacao) {
+            const novos = payload && payload.sincronizacao
+              ? Number(payload.sincronizacao.novos || 0)
+              : 0;
+            mostrarAviso(
+              novos > 0
+                ? novos + ' nova(s) anamnese(s) adicionada(s) ao Monitoramento.'
+                : 'Monitoramento atualizado. Nenhuma anamnese nova.',
+              false,
+              true
+            );
+          }
+        })
+        .catch(function (erro) {
+          revelarAplicativo();
+          if (!state.registros.length) {
+            elements.studentList.innerHTML = renderizarErro(
+              'Não foi possível carregar as prescrições.',
+              mensagemErro(erro)
+            );
+          }
+          mostrarAviso(mensagemErro(erro), true, false);
+        })
+        .finally(function () {
+          state.carregando = false;
+          definirEstadoBotaoAtualizar(false);
+          elements.studentList.removeAttribute('aria-busy');
+        });
+    }
+
+    function aplicarPayload(payload) {
+      const respostasEmMemoria = {};
+      state.registros.forEach(function (registro) {
+        if (registro.respostasCarregadas) {
+          respostasEmMemoria[registro.submissionId] = registro.respostas;
+        }
+      });
+
+      state.registros = Array.isArray(payload.registros) ? payload.registros : [];
+      state.registros.forEach(function (registro) {
+        if (respostasEmMemoria[registro.submissionId]) {
+          registro.respostas = respostasEmMemoria[registro.submissionId];
+          registro.respostasCarregadas = true;
+        }
+      });
+      state.profissionais = Array.isArray(payload.profissionais) ? payload.profissionais : [];
+      state.periodos = Array.isArray(payload.periodos) ? payload.periodos : [];
+      state.atualizadoEm = payload.atualizadoEm || '';
+      preencherFiltros();
+      renderizarTudo();
+    }
+
+    function carregarSnapshotLocal() {
+      if (!temAppsScript()) {
+        return null;
+      }
+      try {
+        const snapshot = JSON.parse(window.localStorage.getItem(SNAPSHOT_KEY) || 'null');
+        if (!snapshot || !snapshot.salvoEm || Date.now() - snapshot.salvoEm > SNAPSHOT_MAX_AGE) {
+          return null;
+        }
+        return snapshot.payload || null;
+      } catch (erro) {
+        return null;
+      }
+    }
+
+    function salvarSnapshotLocal(payload) {
+      if (!temAppsScript() || !payload || !Array.isArray(payload.registros)) {
+        return;
+      }
+      try {
+        const resumo = Object.assign({}, payload, {
+          registros: payload.registros.map(function (registro) {
+            return Object.assign({}, registro, {
+              respostas: [],
+              respostasCarregadas: false,
+            });
+          }),
+        });
+        window.localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({
+          salvoEm: Date.now(),
+          payload: resumo,
+        }));
+      } catch (erro) {
+        // O snapshot é apenas uma otimização de abertura.
+      }
+    }
+
+    function revelarAplicativo() {
+      if (state.appRevelado || state.revelacaoAgendada) {
+        return;
+      }
+
+      state.revelacaoAgendada = true;
+      const agora = window.performance && performance.now ? performance.now() : Date.now();
+      const tempoDecorrido = agora - state.bootInicio;
+      const esperaMinima = Math.max(0, 850 - tempoDecorrido);
+
+      window.setTimeout(function () {
+        window.clearInterval(state.bootTimer);
+        elements.bootStatus.textContent = 'Tudo pronto';
+        atualizarProgressoInicial(100);
+        elements.appShell.hidden = false;
+
+        window.setTimeout(function () {
+          elements.bootScreen.classList.add('is-finishing');
+          window.setTimeout(function () {
+            elements.bootScreen.hidden = true;
+            state.appRevelado = true;
+            state.revelacaoAgendada = false;
+          }, 190);
+        }, 120);
+      }, esperaMinima);
+    }
+
+    function definirEstadoBotaoAtualizar(carregando) {
+      elements.refreshButton.disabled = carregando;
+      elements.refreshButton.querySelector('span:last-child').textContent = carregando
+        ? 'Atualizando'
+        : 'Atualizar';
+    }
+
+    function preencherFiltros() {
+      const profissionalAtual = state.profissional;
+      const nomes = state.profissionais.slice().sort(compararTexto);
+      const temSemProfissional = state.registros.some(function (registro) {
+        return !String(registro.profissional || '').trim();
+      });
+
+      let opcoesProfissional = '<option value="todos">Todos os profissionais</option>';
+      if (temSemProfissional) {
+        opcoesProfissional += '<option value="sem_profissional">Sem profissional</option>';
+      }
+      opcoesProfissional += nomes.map(function (nome) {
+        return '<option value="' + escaparAttr(nome) + '">' + escaparHtml(nome) + '</option>';
+      }).join('');
+      elements.professionalFilter.innerHTML = opcoesProfissional;
+
+      const valoresProfissional = Array.from(elements.professionalFilter.options).map(function (opcao) {
+        return opcao.value;
+      });
+      state.profissional = valoresProfissional.indexOf(profissionalAtual) !== -1
+        ? profissionalAtual
+        : 'todos';
+      elements.professionalFilter.value = state.profissional;
+
+      const periodoAtual = state.periodo;
+      let opcoesPeriodo = [
+        '<option value="ultimos_45">Últimos 45 dias</option>',
+        '<option value="geral">Todos</option>',
+      ];
+      opcoesPeriodo = opcoesPeriodo.concat(state.periodos.map(function (periodo) {
+        return '<option value="' + escaparAttr(periodo.valor) + '">'
+          + escaparHtml(periodo.rotulo)
+          + '</option>';
+      }));
+      elements.periodFilter.innerHTML = opcoesPeriodo.join('');
+
+      const valoresPeriodo = Array.from(elements.periodFilter.options).map(function (opcao) {
+        return opcao.value;
+      });
+      state.periodo = valoresPeriodo.indexOf(periodoAtual) !== -1
+        ? periodoAtual
+        : 'ultimos_45';
+      elements.periodFilter.value = state.periodo;
+      elements.updatedAt.textContent = state.atualizadoEm
+        ? 'Prescrições atualizadas em ' + state.atualizadoEm
+        : 'Prescrições carregadas';
+    }
+
+    function renderizarTudo(opcoes) {
+      const base = filtrarBaseRegistros();
+      renderizarMetricas(base);
+      renderizarLista(base, opcoes || {});
+    }
+
+    function filtrarBaseRegistros() {
+      return state.registros.filter(function (registro) {
+        if (!registroNoPeriodo(registro)) {
+          return false;
+        }
+
+        if (state.profissional === 'sem_profissional' && registro.profissional) {
+          return false;
+        }
+        if (
+          state.profissional !== 'todos'
+          && state.profissional !== 'sem_profissional'
+          && registro.profissional !== state.profissional
+        ) {
+          return false;
+        }
+
+        if (state.busca) {
+          const texto = normalizarTexto([
+            registro.aluno,
+            registro.profissional,
+            registro.submissionId,
+          ].join(' '));
+          if (texto.indexOf(state.busca) === -1) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+    }
+
+    function criarQuestionarioPreview() {
+      const campo = function (rotulo, tipo, etapa, obrigatorio, opcoes) {
+        return { rotulo: rotulo, tipo: tipo, etapa: etapa, obrigatorio: obrigatorio !== false, opcoes: opcoes || [] };
+      };
+      return {
+        versao: 'v2', profissionais: ['Elias', 'James', 'Lucas'],
+        etapas: ['Consentimento e responsável', 'Identificação e dados físicos', 'Experiência de treino', 'Objetivo e rotina', 'Dor, assimetrias e limitações', 'Saúde e preferências', 'Revisar e enviar'],
+        campos: {
+          consentimento: campo('Confirmo que minhas respostas serão usadas para avaliar meu perfil e montar uma prescrição de treino personalizada.', 'consentimento', 1), profissional: campo('Nome do profissional', 'profissional', 1),
+          nomeCompleto: campo('Nome completo', 'texto', 2), email: campo('E-mail', 'email', 2), whatsapp: campo('WhatsApp', 'tel', 2), dataNascimento: campo('Data de nascimento', 'data', 2), alturaCm: campo('Altura em centímetros', 'numero', 2), pesoKg: campo('Peso em kg', 'numero', 2),
+          experienciaMusculacao: campo('Qual é sua experiência com musculação?', 'unica', 3, true, ['Nunca treinei', 'Menos de 3 meses', '3 a 12 meses', '1 a 3 anos', 'Mais de 3 anos']), frequenciaUltimos3Meses: campo('Nos últimos 3 meses, quantas vezes por semana você treinou musculação em média?', 'unica', 3, true, ['Não treinei', '1x por semana', '2x por semana', '3x por semana', '4x ou mais']),
+          objetivo: campo('Qual seu objetivo principal agora?', 'unica', 4, true, ['Ganhar massa', 'Emagrecer', 'Força', 'Saúde', 'Estética', 'Performance', 'Voltar a treinar', 'Outro']), frequenciaPretendida: campo(DEMAND_FIELD_FREQUENCY_LABEL + ' (dias/semana)', 'select', 4, true, ['1', '2', '3', '4', '5', '6', '7']), tempoTreino: campo('Quanto tempo você tem por treino?', 'unica', 4, true, ['40 min', '60 min', '75 min', 'Outro']), atividadesExtras: campo('Além da musculação, você faz corrida, cardio, esporte ou aula?', 'texto_longo', 4),
+          dorAtual: campo('Você sente alguma dor ou desconforto hoje que possa interferir no treino?', 'unica', 5, true, ['Não', 'Sim']), localDor: campo('Onde é a dor ou desconforto?', 'texto', 5, false), intensidadeDor: campo('Intensidade da dor de 0 a 10', 'numero', 5, false), movimentosPioramDor: campo('Quais movimentos pioram essa dor ou desconforto?', 'texto_longo', 5, false), assimetria: campo('Você percebe diferença entre o lado direito e esquerdo do corpo?', 'unica', 5, true, ['Não percebo diferença', 'Sim', 'Não sei dizer']), detalhesAssimetria: campo('Se marcou sim, qual lado, qual região e qual diferença sente?', 'texto', 5, false), movimentosIncomodam: campo('Algum movimento costuma incomodar?', 'multipla', 5, true, ['Nenhum', 'Agachar', 'Correr', 'Subir escada', 'Empurrar', 'Puxar', 'Levantar peso do chão', 'Elevar o braço acima da cabeça', 'Outro']), exerciciosEvitados: campo('Existe algum exercício que você não pode fazer, não gosta ou não se sente seguro fazendo?', 'texto_longo', 5),
+          historicoLesoes: campo('Já teve lesão, cirurgia, hérnia, tendinite, luxação, fratura ou problema de coluna?', 'texto_longo', 6), condicaoImportante: campo('Tem alguma doença ou condição importante?', 'texto', 6), medicamentoContinuo: campo('Usa algum medicamento contínuo?', 'texto', 6), sintomasEsforco: campo('Já sentiu dor no peito, desmaio, tontura forte, falta de ar fora do normal ou palpitação durante esforço?', 'unica', 6, true, ['Não', 'Sim']), preferenciaTreino: campo('Que tipo de treino você prefere?', 'unica', 6, true, ['Curto e direto', 'Mais variado', 'Mais pesado', 'Mais guiado', 'Com máquinas', 'Com pesos livres', 'Sem preferência']), observacoes: campo('Tem algo importante sobre seu corpo, rotina ou treino que eu não perguntei?', 'texto_longo', 6),
+        },
+      };
+    }
+
+    function registroNoPeriodo(registro) {
+      if (state.periodo === 'geral') {
+        return true;
+      }
+      if (state.periodo === 'ultimos_45') {
+        const data = dataLocal(registro.dataAnamnese);
+        if (!data) {
+          return false;
+        }
+        const limite = new Date();
+        limite.setHours(0, 0, 0, 0);
+        limite.setDate(limite.getDate() - 45);
+        return data.getTime() >= limite.getTime();
+      }
+      return registro.periodo === state.periodo;
+    }
+
+    function renderizarMetricas(registros) {
+      const totais = {
+        total: registros.length,
+        a_transferir: registros.filter(function (r) { return r.status === 'a_transferir'; }).length,
+        pendente: registros.filter(function (r) { return r.status === 'pendente'; }).length,
+        prescrito: registros.filter(function (r) { return r.status === 'prescrito'; }).length,
+      };
+
+      const metricas = [
+        { chave: 'total', classe: 'total', valor: totais.total, rotulo: 'Total' },
+        { chave: 'a_transferir', classe: 'a-transferir', valor: totais.a_transferir, rotulo: 'A transferir' },
+        { chave: 'pendente', classe: 'pendentes', valor: totais.pendente, rotulo: 'Pendentes' },
+        { chave: 'prescrito', classe: 'prescritos', valor: totais.prescrito, rotulo: 'Prescritos' },
+      ];
+
+      elements.metrics.innerHTML = metricas.map(function (metrica) {
+        const ativo = state.categoria === metrica.chave;
+        return '<button class="metric-card ' + metrica.classe + (ativo ? ' active' : '')
+          + '" type="button" data-category="' + metrica.chave
+          + '" aria-pressed="' + (ativo ? 'true' : 'false') + '">'
+          + '<span class="metric-value">' + metrica.valor + '</span>'
+          + '<span class="metric-label">' + metrica.rotulo + '</span>'
+          + '</button>';
+      }).join('');
+    }
+
+    function renderizarLista(registrosBase, opcoes) {
+      const scrollAtual = opcoes.restaurarScroll ? window.scrollY : null;
+      let registros = registrosBase.filter(function (registro) {
+        return state.categoria === 'total' || registro.status === state.categoria;
+      });
+      registros = ordenarRegistros(registros);
+
+      elements.listTitle.textContent = tituloLista();
+      elements.itemCount.textContent = registros.length + (registros.length === 1 ? ' item' : ' itens');
+
+      if (!registros.length) {
+        elements.studentList.innerHTML = '<div class="empty-state">'
+          + '<strong>Nenhuma prescrição neste filtro.</strong>'
+          + '<span>Altere os filtros ou atualize os dados.</span>'
+          + '</div>';
+        return;
+      }
+
+      elements.studentList.innerHTML = registros.map(renderizarCard).join('');
+
+      const parametrosPreview = !temAppsScript()
+        ? new URLSearchParams(window.location.search)
+        : null;
+      if (parametrosPreview && (parametrosPreview.has('abrir') || parametrosPreview.has('modal'))) {
+        const primeiroCard = elements.studentList.querySelector('.student-card');
+        if (primeiroCard) {
+          primeiroCard.open = true;
+          if (parametrosPreview.has('modal')) {
+            const botaoInformacoes = primeiroCard.querySelector('[data-action="open-info"]');
+            if (botaoInformacoes) {
+              abrirModalPrescricao(primeiroCard.dataset.id, botaoInformacoes);
+              if (parametrosPreview.get('modal') === 'todos') {
+                alternarSecoesModal();
+              }
+            }
+          }
+        }
+      }
+
+      if (opcoes.reabrirId) {
+        const seletor = '.student-card[data-id="' + cssEscape(opcoes.reabrirId) + '"]';
+        const card = elements.studentList.querySelector(seletor);
+        if (card) {
+          card.open = true;
+        }
+      }
+
+      if (scrollAtual !== null) {
+        window.requestAnimationFrame(function () {
+          window.scrollTo(0, scrollAtual);
+        });
+      }
+    }
+
+    function tituloLista() {
+      const titulos = {
+        total: 'Prescrições',
+        a_transferir: 'Anamneses a transferir',
+        pendente: 'Treinos pendentes',
+        prescrito: 'Treinos prescritos',
+      };
+      return titulos[state.categoria] || titulos.total;
+    }
+
+    function ordenarRegistros(registros) {
+      return registros.slice().sort(function (a, b) {
+        if (state.ordenacao === 'az') {
+          return compararTexto(a.aluno, b.aluno);
+        }
+        const tempoA = tempoRegistro(a);
+        const tempoB = tempoRegistro(b);
+        return state.ordenacao === 'antigos' ? tempoA - tempoB : tempoB - tempoA;
+      });
+    }
+
+    function renderizarCard(registro) {
+      const statusClasse = registro.status === 'prescrito'
+        ? 'status-prescrito'
+        : (registro.status === 'pendente' ? 'status-pendente' : 'status-transferir');
+      const monitoramento = registro.monitoramento || {};
+      const data = monitoramento.dataPrescricao || '';
+      const profissional = registro.profissional || 'Não informado';
+      const dias = registro.diasProcesso === null || registro.diasProcesso === undefined
+        ? 'Sem data'
+        : registro.diasProcesso + ' dias';
+
+      return '<details class="student-card ' + statusClasse + '" data-id="' + escaparAttr(registro.submissionId) + '">'
+        + '<summary class="student-summary">'
+          + '<span class="student-main">'
+            + '<span class="student-name">' + escaparHtml(registro.aluno || 'Aluno não informado') + '</span>'
+            + '<span class="student-subtitle status-line">'
+              + '<span>' + escaparHtml(profissional) + '</span>'
+              + '<span aria-hidden="true">·</span>'
+              + '<span>' + escaparHtml(dataCurta(registro.dataAnamnese)) + '</span>'
+              + '<span class="status-name">' + escaparHtml(registro.statusLabel || '') + '</span>'
+            + '</span>'
+          + '</span>'
+          + '<span class="days-pill">' + escaparHtml(dias) + '</span>'
+          + '<span class="card-chevron" aria-hidden="true">›</span>'
+        + '</summary>'
+        + '<div class="card-body">'
+          + '<section class="process-panel" aria-label="Processo de prescrição">'
+            + '<h3 class="section-kicker">Processo de prescrição</h3>'
+            + '<div class="professional-box">'
+              + '<span>Profissional responsável</span>'
+              + '<strong>' + escaparHtml(profissional) + '</strong>'
+            + '</div>'
+            + '<div class="process-grid">'
+              + renderizarToggle(
+                'transferida',
+                'Anamnese transferida',
+                'Registrada no sistema de prescrição',
+                !!monitoramento.anamneseTransferida
+              )
+              + renderizarToggle(
+                'prescrito',
+                'Treino prescrito',
+                'Prescrição concluída pelo profissional',
+                !!monitoramento.treinoPrescrito
+              )
+            + '</div>'
+            + '<div class="date-field">'
+              + '<label class="process-label" for="date-' + escaparAttr(registro.submissionId) + '">Data da prescrição</label>'
+              + '<input class="date-input" id="date-' + escaparAttr(registro.submissionId)
+              + '" data-role="data" type="date" value="' + escaparAttr(data)
+              + '"' + (monitoramento.treinoPrescrito ? '' : ' disabled') + '>'
+            + '</div>'
+            + '<div class="card-actions">'
+              + '<span class="save-state" aria-live="polite"></span>'
+              + '<button class="save-button" data-action="save" type="button">Salvar</button>'
+            + '</div>'
+            + '<button class="prescription-info-button" data-action="open-info" type="button">'
+              + '<span>Informações para prescrição</span>'
+              + '<span aria-hidden="true">↗</span>'
+            + '</button>'
+          + '</section>'
+        + '</div>'
+      + '</details>';
+    }
+
+    function renderizarToggle(papel, titulo, ajuda, marcado) {
+      return '<label class="toggle-control">'
+        + '<input data-role="' + papel + '" type="checkbox"' + (marcado ? ' checked' : '') + '>'
+        + '<span class="toggle-visual" aria-hidden="true"></span>'
+        + '<span class="toggle-text">'
+          + '<strong>' + titulo + '</strong>'
+          + '<small>' + ajuda + '</small>'
+        + '</span>'
+      + '</label>';
+    }
+
+    function renderizarAnamnese(respostas) {
+      const grupos = agruparRespostas(respostas);
+      const ordem = [
+        'identificacao',
+        'perfil_rotina',
+        'dores_saude',
+        'restricoes',
+        'preferencias',
+      ];
+      const rotulos = {
+        identificacao: 'Identificação',
+        perfil_rotina: 'Perfil físico, objetivo e rotina',
+        dores_saude: 'Dores, lesões e condições de saúde',
+        restricoes: 'Restrições e movimentos',
+        preferencias: 'Preferências e observações',
+      };
+
+      const html = ordem.map(function (chave) {
+        const grupo = grupos[chave];
+        if (!grupo || (!grupo.itens.length && !Object.keys(grupo.chips).length)) {
+          return '';
+        }
+
+        const conteudo = grupo.itens.map(renderizarResposta).join('')
+          + Object.keys(grupo.chips).map(function (pergunta) {
+            return renderizarChips(pergunta, grupo.chips[pergunta]);
+          }).join('');
+
+        return '<details class="anamnesis-section"' + (chave === 'perfil_rotina' ? ' open' : '') + '>'
+          + '<summary class="anamnesis-title">' + escaparHtml(rotulos[chave]) + '</summary>'
+          + '<div class="answer-list">' + conteudo + '</div>'
+          + '</details>';
+      }).join('');
+
+      return html || '<div class="empty-state">Nenhuma resposta disponível para esta anamnese.</div>';
+    }
+
+    function agruparRespostas(respostas) {
+      const grupos = {};
+      respostas.forEach(function (resposta) {
+        if (!resposta || !resposta.campo || valorVazio(resposta.valor)) {
+          return;
+        }
+        if (normalizarTexto(resposta.campo).indexOf('consentimento') !== -1) {
+          return;
+        }
+        if (resposta.tipo === 'booleano' && resposta.valor === false) {
+          return;
+        }
+
+        const grupoChave = categoriaCampo(resposta.campo);
+        if (!grupos[grupoChave]) {
+          grupos[grupoChave] = { itens: [], chips: {} };
+        }
+
+        const opcao = extrairOpcaoCampo(resposta.campo);
+        if (resposta.tipo === 'booleano' && resposta.valor === true && opcao) {
+          if (!grupos[grupoChave].chips[opcao.pergunta]) {
+            grupos[grupoChave].chips[opcao.pergunta] = [];
+          }
+          grupos[grupoChave].chips[opcao.pergunta].push(opcao.opcao);
+          return;
+        }
+
+        grupos[grupoChave].itens.push({
+          campo: resposta.campo,
+          valor: resposta.tipo === 'booleano'
+            ? 'Sim'
+            : formatarValorAnamnese(resposta.valor, resposta.tipo),
+        });
+      });
+      return grupos;
+    }
+
+    function renderizarResposta(resposta) {
+      const valor = String(resposta.valor);
+      const classe = valor.length > 120 ? ' answer-wide' : '';
+      return '<div class="answer-item' + classe + '">'
+        + '<span class="answer-label">' + escaparHtml(resposta.campo) + '</span>'
+        + '<span class="answer-value">' + escaparHtml(valor) + '</span>'
+        + '</div>';
+    }
+
+    function renderizarChips(pergunta, opcoes) {
+      return '<div class="answer-item answer-wide">'
+        + '<span class="answer-label">' + escaparHtml(pergunta) + '</span>'
+        + '<div class="chips">'
+          + opcoes.map(function (opcao) {
+            return '<span class="chip">' + escaparHtml(opcao) + '</span>';
+          }).join('')
+        + '</div>'
+      + '</div>';
+    }
+
+    function categoriaCampo(campo) {
+      const texto = normalizarTexto(campo);
+
+      if (
+        contemAlgum(texto, [
+          'email', 'whatsapp', 'consentimento', 'data de nascimento',
+          'altura', 'peso',
+        ])
+      ) {
+        return 'identificacao';
+      }
+
+      if (contemAlgum(texto, ['experiencia com musculacao', 'ultimos 3 meses'])) {
+        return 'perfil_rotina';
+      }
+
+      if (
+        contemAlgum(texto, [
+          'objetivo principal', 'dias por semana', 'tempo voce tem',
+          'alem da musculacao',
+        ])
+      ) {
+        return 'perfil_rotina';
+      }
+
+      if (
+        contemAlgum(texto, [
+          'dor ou desconforto', 'onde e a dor', 'intensidade da dor',
+          'movimentos pioram', 'diferenca entre o lado', 'qual lado',
+        ])
+      ) {
+        return 'dores_saude';
+      }
+
+      if (
+        contemAlgum(texto, [
+          'lesao', 'cirurgia', 'hernia', 'doenca', 'condicao importante',
+          'medicamento', 'dor no peito', 'desmaio', 'palpitacao',
+        ])
+      ) {
+        return 'dores_saude';
+      }
+
+      if (
+        contemAlgum(texto, [
+          'exercicio que voce nao pode', 'nao se sente seguro',
+          'movimento costuma incomodar',
+        ])
+      ) {
+        return 'restricoes';
+      }
+
+      return 'preferencias';
+    }
+
+    function formatarValorAnamnese(valor, tipo) {
+      if (tipo !== 'data') {
+        return valor;
+      }
+
+      const texto = String(valor || '').trim();
+      const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/);
+      if (iso) {
+        return iso[3] + '/' + iso[2] + '/' + iso[1];
+      }
+
+      const brasileiro = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (brasileiro) {
+        return pad(brasileiro[1]) + '/' + pad(brasileiro[2]) + '/' + brasileiro[3];
+      }
+      return texto;
+    }
+
+    function extrairOpcaoCampo(campo) {
+      const partes = String(campo || '').match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+      if (!partes) {
+        return null;
+      }
+      return {
+        pergunta: partes[1].trim(),
+        opcao: partes[2].trim(),
+      };
+    }
+
+    function tratarAlteracaoCard(event) {
+      const papel = event.target.dataset.role;
+      if (!papel) {
+        return;
+      }
+
+      const card = event.target.closest('.student-card');
+      if (!card) {
+        return;
+      }
+
+      const transferida = card.querySelector('[data-role="transferida"]');
+      const prescrito = card.querySelector('[data-role="prescrito"]');
+      const data = card.querySelector('[data-role="data"]');
+      const estado = card.querySelector('.save-state');
+
+      if (papel === 'prescrito') {
+        if (prescrito.checked && !transferida.checked) {
+          transferida.checked = true;
+          definirEstadoCard(estado, 'Transferência marcada junto com a prescrição.', '');
+        }
+
+        if (!prescrito.checked && data.value) {
+          const confirmar = window.confirm(
+            'Desmarcar o treino prescrito removerá a data da prescrição. Continuar?'
+          );
+          if (!confirmar) {
+            prescrito.checked = true;
+          } else {
+            data.value = '';
+          }
+        }
+        data.disabled = !prescrito.checked;
+      }
+
+      definirEstadoCard(estado, estado.textContent, '');
+    }
+
+    function tratarCliqueCard(event) {
+      const botaoInformacoes = event.target.closest('[data-action="open-info"]');
+      if (botaoInformacoes) {
+        const cardInformacoes = botaoInformacoes.closest('.student-card');
+        if (cardInformacoes) {
+          abrirModalPrescricao(cardInformacoes.dataset.id, botaoInformacoes);
+        }
+        return;
+      }
+
+      const botao = event.target.closest('[data-action="save"]');
+      if (!botao) {
+        return;
+      }
+
+      const card = botao.closest('.student-card');
+      if (!card) {
+        return;
+      }
+      salvarCard(card, botao);
+    }
+
+    function abrirModalPrescricao(submissionId, elementoFoco) {
+      const registro = state.registros.find(function (item) {
+        return item.submissionId === submissionId;
+      });
+      if (!registro) {
+        mostrarAviso('Não foi possível localizar as informações desta anamnese.', true, true);
+        return;
+      }
+
+      state.modalRegistroId = submissionId;
+      state.ultimoFoco = elementoFoco || document.activeElement;
+      elements.modalTitle.textContent = registro.aluno || 'Aluno não informado';
+      elements.modalSubtitle.textContent = [
+        dataCurta(registro.dataAnamnese),
+        registro.profissional || 'Profissional não informado',
+      ].join(' · ');
+      elements.prescriptionModal.hidden = false;
+      document.body.classList.add('modal-open');
+      elements.modalContent.scrollTop = 0;
+      if (registro.respostasCarregadas) {
+        renderizarConteudoModal(registro);
+      } else {
+        elements.modalExpandToggle.disabled = true;
+        elements.modalContent.innerHTML = '<div class="modal-loading" aria-live="polite">'
+          + '<span class="loading-spinner" aria-hidden="true"></span>'
+          + '<strong>Carregando anamnese</strong>'
+          + '</div>';
+        carregarRespostasRegistro(registro)
+          .then(function () {
+            if (state.modalRegistroId === submissionId) {
+              renderizarConteudoModal(registro);
+            }
+          })
+          .catch(function (erro) {
+            if (state.modalRegistroId === submissionId) {
+              elements.modalContent.innerHTML = renderizarErro(
+                'Não foi possível carregar esta anamnese.',
+                mensagemErro(erro)
+              );
+            }
+          });
+      }
+      window.requestAnimationFrame(function () {
+        elements.prescriptionModal.classList.add('is-visible');
+        elements.modalClose.focus();
+      });
+    }
+
+    function carregarRespostasRegistro(registro) {
+      if (registro.respostasCarregadas) {
+        return Promise.resolve(registro.respostas || []);
+      }
+
+      const id = registro.submissionId;
+      if (state.carregamentosAnamnese[id]) {
+        return state.carregamentosAnamnese[id];
+      }
+
+      const carregamento = executarAppsScript('getRespostasAnamnese', id)
+        .then(function (respostas) {
+          registro.respostas = Array.isArray(respostas) ? respostas : [];
+          registro.respostasCarregadas = true;
+          return registro.respostas;
+        })
+        .finally(function () {
+          delete state.carregamentosAnamnese[id];
+        });
+
+      state.carregamentosAnamnese[id] = carregamento;
+      return carregamento;
+    }
+
+    function agendarPrecarregamentoAnamneses() {
+      window.clearTimeout(state.prefetchTimer);
+      if (state.prefetchEmAndamento || !navigator.onLine) {
+        return;
+      }
+
+      state.prefetchTimer = window.setTimeout(function () {
+        if (document.hidden || !elements.prescriptionModal.hidden) {
+          agendarPrecarregamentoAnamneses();
+          return;
+        }
+
+        const candidatos = ordenarRegistros(filtrarBaseRegistros())
+          .filter(function (registro) {
+            return !registro.respostasCarregadas
+              && !state.carregamentosAnamnese[registro.submissionId];
+          })
+          .slice(0, 10);
+
+        if (!candidatos.length) {
+          return;
+        }
+
+        const ids = candidatos.map(function (registro) {
+          return registro.submissionId;
+        });
+        state.prefetchEmAndamento = true;
+
+        const lote = executarAppsScript('getRespostasAnamneses', ids)
+          .then(function (respostasPorId) {
+            candidatos.forEach(function (registro) {
+              const respostas = respostasPorId && respostasPorId[registro.submissionId];
+              if (Array.isArray(respostas)) {
+                registro.respostas = respostas;
+                registro.respostasCarregadas = true;
+              }
+            });
+            return respostasPorId || {};
+          })
+          .finally(function () {
+            state.prefetchEmAndamento = false;
+            ids.forEach(function (id) {
+              delete state.carregamentosAnamnese[id];
+            });
+          });
+
+        candidatos.forEach(function (registro) {
+          state.carregamentosAnamnese[registro.submissionId] = lote.then(function () {
+            return registro.respostas || [];
+          });
+        });
+      }, 1200);
+    }
+
+    function renderizarConteudoModal(registro) {
+      elements.modalContent.innerHTML = '<div class="modal-section-heading">Anamnese</div>'
+        + renderizarAnamnese(registro.respostas || []);
+      elements.modalContent.scrollTop = 0;
+      elements.modalExpandToggle.disabled = false;
+      atualizarBotaoSecoesModal();
+    }
+
+    function fecharModalPrescricao() {
+      if (elements.prescriptionModal.hidden) {
+        return;
+      }
+      elements.prescriptionModal.classList.remove('is-visible');
+      elements.prescriptionModal.hidden = true;
+      document.body.classList.remove('modal-open');
+      state.modalRegistroId = '';
+      if (state.ultimoFoco && typeof state.ultimoFoco.focus === 'function') {
+        state.ultimoFoco.focus();
+      }
+      state.ultimoFoco = null;
+    }
+
+    function alternarSecoesModal() {
+      const secoes = Array.from(elements.modalContent.querySelectorAll('.anamnesis-section'));
+      if (!secoes.length) {
+        return;
+      }
+      const expandir = secoes.some(function (secao) { return !secao.open; });
+      secoes.forEach(function (secao) {
+        secao.open = expandir;
+      });
+      atualizarBotaoSecoesModal();
+    }
+
+    function atualizarBotaoSecoesModal() {
+      const secoes = Array.from(elements.modalContent.querySelectorAll('.anamnesis-section'));
+      const todasAbertas = secoes.length > 0 && secoes.every(function (secao) {
+        return secao.open;
+      });
+      const acao = todasAbertas ? 'Recolher todos os blocos' : 'Expandir todos os blocos';
+      elements.modalExpandToggle.setAttribute('aria-label', acao);
+      elements.modalExpandToggle.setAttribute('title', acao);
+      elements.modalExpandToggle.classList.toggle('all-open', todasAbertas);
+      elements.modalExpandToggle.querySelector('span').textContent = todasAbertas ? '↥' : '↕';
+    }
+
+    function salvarCard(card, botao) {
+      const id = card.dataset.id;
+      const transferida = card.querySelector('[data-role="transferida"]').checked;
+      const prescrito = card.querySelector('[data-role="prescrito"]').checked;
+      const dataInput = card.querySelector('[data-role="data"]');
+      const data = dataInput.value;
+      const estado = card.querySelector('.save-state');
+
+      if (prescrito && !data) {
+        dataInput.focus();
+        definirEstadoCard(estado, 'Escolha a data da prescrição.', 'error');
+        return;
+      }
+
+      botao.disabled = true;
+      botao.textContent = 'Salvando';
+      definirEstadoCard(estado, '', '');
+
+      executarAppsScript(
+        'salvarMonitoramentoPrescricao',
+        id,
+        transferida,
+        prescrito,
+        data
+      )
+        .then(function (registroAtualizado) {
+          atualizarRegistroLocal(registroAtualizado);
+          renderizarTudo({
+            reabrirId: id,
+            restaurarScroll: true,
+          });
+          const cardAtualizado = elements.studentList.querySelector(
+            '.student-card[data-id="' + cssEscape(id) + '"]'
+          );
+          if (cardAtualizado) {
+            definirEstadoCard(
+              cardAtualizado.querySelector('.save-state'),
+              'Alterações salvas.',
+              'success'
+            );
+          }
+          mostrarAviso('Prescrição de ' + (registroAtualizado.aluno || 'aluno') + ' atualizada.', false, true);
+        })
+        .catch(function (erro) {
+          botao.disabled = false;
+          botao.textContent = 'Salvar';
+          definirEstadoCard(estado, mensagemErro(erro), 'error');
+        });
+    }
+
+    function atualizarRegistroLocal(registroAtualizado) {
+      const indice = state.registros.findIndex(function (registro) {
+        return registro.submissionId === registroAtualizado.submissionId;
+      });
+      if (indice === -1) {
+        state.registros.push(registroAtualizado);
+      } else {
+        const anterior = state.registros[indice];
+        if (anterior.respostasCarregadas && !registroAtualizado.respostasCarregadas) {
+          registroAtualizado.respostas = anterior.respostas;
+          registroAtualizado.respostasCarregadas = true;
+        }
+        state.registros[indice] = registroAtualizado;
+      }
+      salvarSnapshotLocal({
+        registros: state.registros,
+        profissionais: state.profissionais,
+        periodos: state.periodos,
+        atualizadoEm: state.atualizadoEm,
+      });
+    }
+
+    function definirEstadoCard(elemento, mensagem, classe) {
+      if (!elemento) {
+        return;
+      }
+      elemento.textContent = mensagem || '';
+      elemento.className = 'save-state' + (classe ? ' ' + classe : '');
+    }
+
+    function mostrarAviso(mensagem, erro, temporario) {
+      window.clearTimeout(state.noticeTimer);
+      elements.notice.textContent = mensagem || '';
+      elements.notice.className = 'notice' + (erro ? ' error' : '');
+      elements.notice.hidden = !mensagem;
+
+      if (mensagem && temporario) {
+        state.noticeTimer = window.setTimeout(function () {
+          elements.notice.hidden = true;
+        }, 4200);
+      }
+    }
+
+    function abrirAbaAplicativo(nome) {
+      const novaAba = nome === 'nova-demanda' ? 'nova-demanda' : 'acompanhamento';
+      state.activeView = novaAba;
+      elements.prescriptionsView.hidden = novaAba !== 'acompanhamento';
+      elements.demandView.hidden = novaAba !== 'nova-demanda';
+      elements.appTabs.forEach(function (botao) {
+        const ativa = botao.dataset.appView === novaAba;
+        botao.classList.toggle('is-active', ativa);
+        botao.setAttribute('aria-selected', ativa ? 'true' : 'false');
+      });
+      if (novaAba === 'nova-demanda') carregarQuestionarioDemanda();
+    }
+
+    function carregarQuestionarioDemanda() {
+      if (state.questionario) {
+        renderizarWizardDemanda();
+        return Promise.resolve();
+      }
+      elements.wizardDescription.textContent = 'Preparando perguntas';
+      return executarAppsScript('getQuestionarioPwaPrescricao')
+        .then(function (questionario) {
+          state.questionario = questionario || criarQuestionarioPreview();
+          state.demandDraft = carregarRascunhoDemanda() || criarRascunhoDemanda();
+          state.demandStep = state.demandDraft.etapa || 1;
+          renderizarWizardDemanda();
+        })
+        .catch(function (erro) {
+          elements.wizardFields.innerHTML = renderizarErro('Não foi possível abrir a anamnese', mensagemErro(erro));
+        });
+    }
+
+    function criarRascunhoDemanda() {
+      return { versao: state.questionario ? state.questionario.versao : 'v2', salvoEm: Date.now(), etapa: 1, tentativaId: gerarTentativaDemanda(), respostas: {} };
+    }
+
+    function gerarTentativaDemanda() {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+      return 'tentativa-' + Date.now() + '-' + Math.random().toString(36).slice(2, 12);
+    }
+
+    function carregarRascunhoDemanda() {
+      try {
+        const texto = window.localStorage.getItem(DEMAND_DRAFT_KEY);
+        const rascunho = texto ? JSON.parse(texto) : null;
+        if (!rascunho || !state.questionario || rascunho.versao !== state.questionario.versao || !rascunho.salvoEm || Date.now() - rascunho.salvoEm > DEMAND_DRAFT_MAX_AGE) {
+          window.localStorage.removeItem(DEMAND_DRAFT_KEY);
+          return null;
+        }
+        return rascunho;
+      } catch (erro) {
+        return null;
+      }
+    }
+
+    function salvarRascunhoDemanda() {
+      if (!state.questionario || state.demandSubmitting) return;
+      state.demandDraft = state.demandDraft || criarRascunhoDemanda();
+      state.demandDraft.respostas = capturarValoresDemanda();
+      state.demandDraft.etapa = state.demandStep;
+      state.demandDraft.salvoEm = Date.now();
+      try { window.localStorage.setItem(DEMAND_DRAFT_KEY, JSON.stringify(state.demandDraft)); } catch (erro) {}
+    }
+
+    function descartarRascunhoDemanda() {
+      window.localStorage.removeItem(DEMAND_DRAFT_KEY);
+      state.demandDraft = criarRascunhoDemanda();
+      state.demandStep = 1;
+      renderizarWizardDemanda();
+      mostrarAviso('Rascunho descartado.', false, true);
+    }
+
+    function camposDaEtapaDemanda(etapa) {
+      const campos = state.questionario && state.questionario.campos ? state.questionario.campos : {};
+      return Object.keys(campos).filter(function (chave) {
+        const campo = campos[chave];
+        return campo.etapa === etapa;
+      });
+    }
+
+    function renderizarWizardDemanda() {
+      const etapas = state.questionario.etapas || [];
+      const etapa = Math.min(Math.max(state.demandStep, 1), etapas.length || 7);
+      state.demandStep = etapa;
+      elements.wizardDescription.textContent = 'Etapa ' + etapa + ' de ' + etapas.length + ' — ' + (etapas[etapa - 1] || 'Revisão');
+      elements.wizardProgress.style.width = (etapa / etapas.length * 100) + '%';
+      elements.wizardProgress.setAttribute('aria-valuenow', String(etapa));
+      elements.wizardBack.hidden = etapa === 1;
+      elements.wizardNext.hidden = etapa === etapas.length;
+      elements.wizardSubmit.hidden = etapa !== etapas.length;
+      const revisar = etapa === etapas.length;
+      const campos = revisar ? [] : camposDaEtapaDemanda(etapa);
+      elements.wizardFields.hidden = revisar;
+      elements.wizardFields.innerHTML = campos.map(renderizarCampoDemanda).join('');
+      elements.wizardReview.hidden = !revisar;
+      elements.wizardReview.classList.toggle('wizard-review-step', revisar);
+      if (revisar) elements.wizardReview.innerHTML = renderizarRevisaoDemanda();
+    }
+
+    function renderizarCampoDemanda(chave) {
+      const campo = state.questionario.campos[chave];
+      const respostas = state.demandDraft.respostas || {};
+      const valor = respostas[chave];
+      const obrigatorio = campo.obrigatorio ? ' required' : '';
+      const id = 'demand_' + chave;
+      if (campo.tipo === 'consentimento') {
+        return '<label class="wizard-consent" for="' + id + '"><input id="' + id + '" name="' + chave + '" type="checkbox"' + (valor ? ' checked' : '') + obrigatorio + '><span>' + escaparHtml(campo.rotulo) + '</span></label>';
+      }
+      if (campo.tipo === 'unica' || campo.tipo === 'profissional') {
+        const opcoes = campo.tipo === 'profissional' ? (state.questionario.profissionais || []) : campo.opcoes;
+        return '<fieldset class="wizard-field"><legend>' + escaparHtml(campo.rotulo) + (campo.obrigatorio ? ' <em>*</em>' : '') + '</legend>'
+          + opcoes.map(function (opcao) { return '<label class="wizard-choice"><input name="' + chave + '" type="radio" value="' + escaparAttr(opcao) + '"' + (valor === opcao ? ' checked' : '') + obrigatorio + '><span>' + escaparHtml(opcao) + '</span></label>'; }).join('') + '</fieldset>';
+      }
+      if (campo.tipo === 'multipla') {
+        const marcados = Array.isArray(valor) ? valor : [];
+        return '<fieldset class="wizard-field"><legend>' + escaparHtml(campo.rotulo) + ' <em>*</em></legend>'
+          + campo.opcoes.map(function (opcao) { return '<label class="wizard-choice"><input name="' + chave + '" type="checkbox" value="' + escaparAttr(opcao) + '"' + (marcados.indexOf(opcao) !== -1 ? ' checked' : '') + '><span>' + escaparHtml(opcao) + '</span></label>'; }).join('') + '</fieldset>';
+      }
+      if (campo.tipo === 'select') {
+        const listaId = id + '_opcoes';
+        return '<div class="wizard-field custom-select" data-custom-select><label id="' + id + '_label">' + escaparHtml(campo.rotulo) + ' <em>*</em></label>'
+          + '<input id="' + id + '" name="' + chave + '" type="hidden" value="' + escaparAttr(valor || '') + '">'
+          + '<button class="custom-select-trigger" type="button" data-custom-select-toggle role="combobox" aria-expanded="false" aria-haspopup="listbox" aria-controls="' + listaId + '" aria-labelledby="' + id + '_label ' + id + '_value">'
+          + '<span id="' + id + '_value">' + escaparHtml(valor || 'Selecione') + '</span><span class="custom-select-chevron" aria-hidden="true">⌄</span></button>'
+          + '<ul class="custom-select-menu" id="' + listaId + '" role="listbox" aria-labelledby="' + id + '_label" hidden>'
+          + campo.opcoes.map(function (opcao) { return '<li><button type="button" role="option" data-custom-select-option data-value="' + escaparAttr(opcao) + '" aria-selected="' + (valor === opcao ? 'true' : 'false') + '">' + escaparHtml(opcao) + '</button></li>'; }).join('')
+          + '</ul></div>';
+      }
+      const tag = campo.tipo === 'texto_longo' ? 'textarea' : 'input';
+      const tipo = campo.tipo === 'data' ? 'date' : (campo.tipo === 'numero' ? 'number' : (campo.tipo === 'email' ? 'email' : (campo.tipo === 'tel' ? 'tel' : 'text')));
+      const controle = tag === 'textarea'
+        ? '<textarea id="' + id + '" name="' + chave + '" rows="4"' + obrigatorio + '>' + escaparHtml(valor || '') + '</textarea>'
+        : '<input id="' + id + '" name="' + chave + '" type="' + tipo + '" value="' + escaparAttr(valor || '') + '"' + (tipo === 'number' ? ' inputmode="decimal"' : '') + obrigatorio + '>';
+      return '<div class="wizard-field"><label for="' + id + '">' + escaparHtml(campo.rotulo) + (campo.obrigatorio ? ' <em>*</em>' : '') + '</label>' + controle + '</div>';
+    }
+
+    function fecharSelectsCustom() {
+      Array.prototype.slice.call(elements.demandWizard.querySelectorAll('.custom-select.is-open')).forEach(function (seletor) {
+        seletor.classList.remove('is-open');
+        seletor.querySelector('.custom-select-menu').hidden = true;
+        seletor.querySelector('[data-custom-select-toggle]').setAttribute('aria-expanded', 'false');
+      });
+    }
+
+    function abrirSelectCustom(seletor) {
+      fecharSelectsCustom();
+      seletor.classList.add('is-open');
+      seletor.querySelector('.custom-select-menu').hidden = false;
+      seletor.querySelector('[data-custom-select-toggle]').setAttribute('aria-expanded', 'true');
+    }
+
+    function selecionarOpcaoSelectCustom(opcao) {
+      const seletor = opcao.closest('.custom-select');
+      const valor = opcao.dataset.value || '';
+      seletor.querySelector('input[type="hidden"]').value = valor;
+      seletor.querySelector('.custom-select-trigger span:first-child').textContent = valor || 'Selecione';
+      Array.prototype.slice.call(seletor.querySelectorAll('[data-custom-select-option]')).forEach(function (item) {
+        item.setAttribute('aria-selected', item === opcao ? 'true' : 'false');
+      });
+      fecharSelectsCustom();
+      salvarRascunhoDemanda();
+    }
+
+    function tratarCliqueSelectCustom(event) {
+      const alternador = event.target.closest('[data-custom-select-toggle]');
+      if (alternador) {
+        event.preventDefault();
+        event.stopPropagation();
+        const seletor = alternador.closest('.custom-select');
+        if (seletor.classList.contains('is-open')) fecharSelectsCustom();
+        else abrirSelectCustom(seletor);
+        return;
+      }
+      const opcao = event.target.closest('[data-custom-select-option]');
+      if (opcao) {
+        event.preventDefault();
+        selecionarOpcaoSelectCustom(opcao);
+      }
+    }
+
+    function tratarTecladoSelectCustom(event) {
+      const alternador = event.target.closest('[data-custom-select-toggle]');
+      const opcao = event.target.closest('[data-custom-select-option]');
+      const teclasAbrir = ['ArrowDown', 'ArrowUp', 'Enter', ' '];
+      if (alternador && teclasAbrir.indexOf(event.key) !== -1) {
+        event.preventDefault();
+        const seletor = alternador.closest('.custom-select');
+        abrirSelectCustom(seletor);
+        const opcoes = Array.prototype.slice.call(seletor.querySelectorAll('[data-custom-select-option]'));
+        const selecionada = seletor.querySelector('[aria-selected="true"]');
+        const indice = selecionada ? opcoes.indexOf(selecionada) : 0;
+        (opcoes[event.key === 'ArrowUp' ? Math.max(0, indice - 1) : indice] || opcoes[0]).focus();
+        return;
+      }
+      if (alternador && event.key === 'Escape') {
+        fecharSelectsCustom();
+        return;
+      }
+      if (!opcao) return;
+      const seletor = opcao.closest('.custom-select');
+      const opcoes = Array.prototype.slice.call(seletor.querySelectorAll('[data-custom-select-option]'));
+      const indice = opcoes.indexOf(opcao);
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        fecharSelectsCustom();
+        seletor.querySelector('[data-custom-select-toggle]').focus();
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        selecionarOpcaoSelectCustom(opcao);
+        seletor.querySelector('[data-custom-select-toggle]').focus();
+      } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End') {
+        event.preventDefault();
+        const proximo = event.key === 'Home' ? 0 : (event.key === 'End' ? opcoes.length - 1 : Math.max(0, Math.min(opcoes.length - 1, indice + (event.key === 'ArrowDown' ? 1 : -1))));
+        opcoes[proximo].focus();
+      }
+    }
+
+    function capturarValoresDemanda() {
+      const respostas = Object.assign({}, state.demandDraft && state.demandDraft.respostas || {});
+      if (!state.questionario) return respostas;
+      Object.keys(state.questionario.campos).forEach(function (chave) {
+        const campo = state.questionario.campos[chave];
+        const controles = elements.demandWizard.querySelectorAll('[name="' + cssEscape(chave) + '"]');
+        if (!controles.length) return;
+        if (campo.tipo === 'multipla') respostas[chave] = Array.prototype.slice.call(controles).filter(function (input) { return input.checked; }).map(function (input) { return input.value; });
+        else if (campo.tipo === 'unica' || campo.tipo === 'profissional') {
+          const marcado = Array.prototype.slice.call(controles).find(function (input) { return input.checked; });
+          respostas[chave] = marcado ? marcado.value : '';
+        } else if (campo.tipo === 'consentimento') respostas[chave] = !!controles[0].checked;
+        else respostas[chave] = controles[0].value;
+      });
+      return respostas;
+    }
+
+    function mudarEtapaDemanda(delta) {
+      salvarRascunhoDemanda();
+      if (delta > 0 && !validarEtapaDemanda()) return;
+      state.demandStep = Math.min(Math.max(1, state.demandStep + delta), state.questionario.etapas.length);
+      state.demandDraft.etapa = state.demandStep;
+      salvarRascunhoDemanda();
+      renderizarWizardDemanda();
+      elements.demandView.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function validarEtapaDemanda() {
+      const campos = camposDaEtapaDemanda(state.demandStep);
+      for (let i = 0; i < campos.length; i++) {
+        const controles = elements.demandWizard.querySelectorAll('[name="' + cssEscape(campos[i]) + '"]');
+        if (!controles.length || !state.questionario.campos[campos[i]].obrigatorio) continue;
+        const campo = state.questionario.campos[campos[i]];
+        const valido = campo.tipo === 'multipla'
+          ? Array.prototype.slice.call(controles).some(function (input) { return input.checked; })
+          : (campo.tipo === 'unica' || campo.tipo === 'profissional'
+            ? Array.prototype.slice.call(controles).some(function (input) { return input.checked; })
+            : (campo.tipo === 'consentimento'
+              ? controles[0].checked
+              : (campo.tipo === 'select' ? !!controles[0].value : controles[0].checkValidity())));
+        if (!valido) {
+          mostrarAviso('Preencha: ' + campo.rotulo, true, false);
+          const alvo = campo.tipo === 'select'
+            ? controles[0].closest('.custom-select').querySelector('[data-custom-select-toggle]')
+            : controles[0];
+          alvo.focus();
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function renderizarRevisaoDemanda() {
+      const respostas = state.demandDraft.respostas || {};
+      return '<h3>Revise antes de enviar</h3>' + Object.keys(state.questionario.campos).filter(function (chave) { return chave !== 'consentimento' && respostas[chave]; }).map(function (chave) {
+        const campo = state.questionario.campos[chave];
+        const valor = Array.isArray(respostas[chave]) ? respostas[chave].join(', ') : respostas[chave];
+        return '<div><strong>' + escaparHtml(campo.rotulo) + '</strong><span>' + escaparHtml(valor) + '</span></div>';
+      }).join('');
+    }
+
+    function enviarDemandaWizard(event) {
+      event.preventDefault();
+      salvarRascunhoDemanda();
+      if (state.demandSubmitting || !validarEtapaDemanda()) return;
+      state.demandSubmitting = true;
+      elements.wizardSubmit.disabled = true;
+      elements.wizardSubmit.textContent = 'Enviando…';
+      executarAppsScript('enviarDemandaPwaPrescricao', {
+        versao: state.questionario.versao, tentativaId: state.demandDraft.tentativaId, respostas: state.demandDraft.respostas,
+      }).then(function (resultado) {
+        window.localStorage.removeItem(DEMAND_DRAFT_KEY);
+        state.demandDraft = criarRascunhoDemanda();
+        state.demandStep = 1;
+        mostrarAviso('Demanda enviada com sucesso. ID: ' + (resultado.demandaId || ''), false, false);
+        renderizarWizardDemanda();
+      }).catch(function (erro) {
+        mostrarAviso('Não foi possível enviar. Seu rascunho foi mantido: ' + mensagemErro(erro), true, false);
+      }).finally(function () {
+        state.demandSubmitting = false;
+        elements.wizardSubmit.disabled = false;
+        elements.wizardSubmit.textContent = 'Enviar demanda';
+      });
+    }
+
+    function executarAppsScript(nomeFuncao) {
+      const args = Array.prototype.slice.call(arguments, 1);
+      if (temAppsScript()) {
+        return new Promise(function (resolve, reject) {
+          const chamada = google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler(reject);
+          chamada[nomeFuncao](...args);
+        });
+      }
+      return executarMock(nomeFuncao, args);
+    }
+
+    function temAppsScript() {
+      return typeof google !== 'undefined'
+        && google.script
+        && google.script.run;
+    }
+
+    function executarMock(nomeFuncao, args) {
+      if (!state.previewPayload) {
+        state.previewPayload = criarPayloadPreview();
+      }
+
+      return new Promise(function (resolve, reject) {
+        window.setTimeout(function () {
+          if (
+            nomeFuncao === 'getDadosPrescricoes'
+            || nomeFuncao === 'atualizarMonitoramentoEObterDados'
+          ) {
+            const payload = clonar(state.previewPayload);
+            payload.atualizadoEm = dataHoraAgora();
+            payload.sincronizacao = {
+              novos: 0,
+              totalRespostas: payload.registros.length,
+            };
+            resolve(payload);
+            return;
+          }
+
+          if (nomeFuncao === 'getQuestionarioPwaPrescricao') {
+            resolve(criarQuestionarioPreview());
+            return;
+          }
+
+          if (nomeFuncao === 'enviarDemandaPwaPrescricao') {
+            resolve({ ok: true, demandaId: 'DEM-PRÉVIA-001', repetida: false });
+            return;
+          }
+
+          if (nomeFuncao === 'getRespostasAnamnese') {
+            const registroAnamnese = state.previewPayload.registros.find(function (item) {
+              return item.submissionId === args[0];
+            });
+            if (!registroAnamnese) {
+              reject(new Error('Registro não encontrado.'));
+              return;
+            }
+            resolve(clonar(registroAnamnese.respostas || []));
+            return;
+          }
+
+          if (nomeFuncao === 'getRespostasAnamneses') {
+            const respostasEmLote = {};
+            (args[0] || []).forEach(function (id) {
+              const registroLote = state.previewPayload.registros.find(function (item) {
+                return item.submissionId === id;
+              });
+              if (registroLote) {
+                respostasEmLote[id] = clonar(registroLote.respostas || []);
+              }
+            });
+            resolve(respostasEmLote);
+            return;
+          }
+
+          if (nomeFuncao === 'salvarMonitoramentoPrescricao') {
+            const id = args[0];
+            const registro = state.previewPayload.registros.find(function (item) {
+              return item.submissionId === id;
+            });
+            if (!registro) {
+              reject(new Error('Registro não encontrado.'));
+              return;
+            }
+            if (args[2] && !args[3]) {
+              reject(new Error('A data da prescrição é obrigatória.'));
+              return;
+            }
+
+            registro.monitoramento.anamneseTransferida = !!args[1];
+            registro.monitoramento.treinoPrescrito = !!args[2];
+            registro.monitoramento.dataPrescricao = args[2] ? args[3] : '';
+            registro.monitoramento.dataPrescricaoLabel = args[2] ? dataBr(args[3]) : '';
+            registro.monitoramento.atualizadoEm = dataHoraAgora();
+            registro.status = args[2] ? 'prescrito' : (args[1] ? 'pendente' : 'a_transferir');
+            registro.statusLabel = registro.status === 'prescrito'
+              ? 'Prescrito'
+              : (registro.status === 'pendente' ? 'Pendente' : 'A transferir');
+            resolve(clonar(registro));
+            return;
+          }
+
+          reject(new Error('Função de prévia não encontrada: ' + nomeFuncao));
+        }, 260);
+      });
+    }
+
+    function criarPayloadPreview() {
+      const respostasBase = [
+        { campo: 'Email', valor: 'aluno@exemplo.com', tipo: 'texto' },
+        { campo: 'Whatsapp', valor: '85999999999', tipo: 'texto' },
+        { campo: 'Data de nascimento', valor: '1976-08-14', tipo: 'data' },
+        { campo: 'Consentimento', valor: 'Confirmo que minhas respostas serão usadas.', tipo: 'texto' },
+        { campo: 'Consentimento (Confirmo)', valor: true, tipo: 'booleano' },
+        { campo: 'Altura em centímetros', valor: 172, tipo: 'numero' },
+        { campo: 'Peso em kg', valor: 76, tipo: 'numero' },
+        { campo: 'Qual é sua experiência com musculação?', valor: 'Mais de 3 anos', tipo: 'texto' },
+        { campo: 'Qual seu objetivo principal agora?', valor: 'Ganhar massa', tipo: 'texto' },
+        { campo: 'Quantos dias por semana você consegue treinar de verdade, mesmo em semana corrida?', valor: 4, tipo: 'numero' },
+        { campo: 'Você sente alguma dor ou desconforto hoje que possa interferir no treino?', valor: 'Sim', tipo: 'texto' },
+        { campo: 'Onde é a dor ou desconforto?', valor: 'Região lombar', tipo: 'texto' },
+        { campo: 'Intensidade da dor de 0 a 10', valor: 3, tipo: 'numero' },
+        { campo: 'Tem alguma doença ou condição importante? (Nenhuma)', valor: true, tipo: 'booleano' },
+        { campo: 'Algum movimento costuma incomodar? (Agachar)', valor: true, tipo: 'booleano' },
+        { campo: 'Algum movimento costuma incomodar? (Correr)', valor: false, tipo: 'booleano' },
+        { campo: 'O que mais atrapalha você a seguir um treino? (Falta de tempo)', valor: true, tipo: 'booleano' },
+        { campo: 'Que tipo de treino você prefere?', valor: 'Com máquinas', tipo: 'texto' },
+        { campo: 'Tem algo importante sobre seu corpo, rotina ou treino que eu não perguntei?', valor: 'Trabalho sentado durante a maior parte do dia.', tipo: 'texto' },
+      ];
+
+      const hoje = new Date();
+      const data1 = deslocarData(hoje, -2);
+      const data2 = deslocarData(hoje, -5);
+      const data3 = deslocarData(hoje, -10);
+
+      return {
+        atualizadoEm: dataHoraAgora(),
+        profissionais: ['Elias', 'Lucas', 'Robson'],
+        periodos: [
+          { valor: periodoData(hoje), rotulo: mesAno(hoje) },
+        ],
+        registros: [
+          criarRegistroPreview('PREV001', 'MARIANA OLIVEIRA', 'Elias', data1, 'a_transferir', respostasBase),
+          criarRegistroPreview('PREV002', 'PAULO HENRIQUE SANTOS', 'Lucas', data2, 'pendente', respostasBase),
+          criarRegistroPreview('PREV003', 'ROBERTA SALES OLIVEIRA PINHEIRO', 'Robson', data3, 'prescrito', respostasBase),
+        ],
+      };
+    }
+
+    function criarRegistroPreview(id, aluno, profissional, data, status, respostas) {
+      const prescrito = status === 'prescrito';
+      const transferida = status !== 'a_transferir';
+      return {
+        submissionId: id,
+        aluno: aluno,
+        profissional: profissional,
+        dataAnamnese: isoLocal(data),
+        dataAnamneseLabel: dataHora(data),
+        periodo: periodoData(data),
+        status: status,
+        statusLabel: status === 'prescrito'
+          ? 'Prescrito'
+          : (status === 'pendente' ? 'Pendente' : 'A transferir'),
+        diasProcesso: prescrito ? 7 : Math.max(0, Math.round((new Date() - data) / 86400000)),
+        monitoramento: {
+          anamneseTransferida: transferida,
+          treinoPrescrito: prescrito,
+          dataPrescricao: prescrito ? isoData(deslocarData(data, 7)) : '',
+          dataPrescricaoLabel: prescrito ? dataBr(isoData(deslocarData(data, 7))) : '',
+          atualizadoEm: prescrito ? dataHoraAgora() : '',
+        },
+        respostas: clonar(respostas),
+        respostasCarregadas: true,
+      };
+    }
+
+    function dataLocal(valor) {
+      if (!valor) {
+        return null;
+      }
+      const data = new Date(valor);
+      return isNaN(data.getTime()) ? null : data;
+    }
+
+    function tempoRegistro(registro) {
+      const data = dataLocal(registro.dataAnamnese);
+      return data ? data.getTime() : 0;
+    }
+
+    function dataCurta(valor) {
+      const data = dataLocal(valor);
+      if (!data) {
+        return 'Sem data';
+      }
+      return pad(data.getDate()) + '/' + pad(data.getMonth() + 1) + '/' + data.getFullYear();
+    }
+
+    function dataBr(valor) {
+      const partes = String(valor || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      return partes ? partes[3] + '/' + partes[2] + '/' + partes[1] : '';
+    }
+
+    function dataHoraAgora() {
+      return dataHora(new Date());
+    }
+
+    function dataHora(data) {
+      return pad(data.getDate()) + '/'
+        + pad(data.getMonth() + 1) + '/'
+        + data.getFullYear() + ' '
+        + pad(data.getHours()) + ':'
+        + pad(data.getMinutes());
+    }
+
+    function isoData(data) {
+      return data.getFullYear() + '-' + pad(data.getMonth() + 1) + '-' + pad(data.getDate());
+    }
+
+    function isoLocal(data) {
+      return isoData(data) + 'T' + pad(data.getHours()) + ':' + pad(data.getMinutes()) + ':00';
+    }
+
+    function periodoData(data) {
+      return data.getFullYear() + '-' + pad(data.getMonth() + 1);
+    }
+
+    function mesAno(data) {
+      return pad(data.getMonth() + 1) + '/' + data.getFullYear();
+    }
+
+    function deslocarData(data, dias) {
+      const copia = new Date(data.getTime());
+      copia.setDate(copia.getDate() + dias);
+      return copia;
+    }
+
+    function pad(valor) {
+      return String(valor).padStart(2, '0');
+    }
+
+    function valorVazio(valor) {
+      return valor === null || valor === undefined || String(valor).trim() === '';
+    }
+
+    function contemAlgum(texto, termos) {
+      return termos.some(function (termo) {
+        return texto.indexOf(termo) !== -1;
+      });
+    }
+
+    function normalizarTexto(valor) {
+      return String(valor || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function compararTexto(a, b) {
+      return String(a || '').localeCompare(String(b || ''), 'pt-BR');
+    }
+
+    function clonar(valor) {
+      return JSON.parse(JSON.stringify(valor));
+    }
+
+    function mensagemErro(erro) {
+      return erro && erro.message ? erro.message : String(erro || 'Erro desconhecido.');
+    }
+
+    function escaparHtml(valor) {
+      return String(valor === null || valor === undefined ? '' : valor)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escaparAttr(valor) {
+      return escaparHtml(valor);
+    }
+
+    function cssEscape(valor) {
+      if (window.CSS && typeof window.CSS.escape === 'function') {
+        return window.CSS.escape(String(valor));
+      }
+      return String(valor).replace(/["\\]/g, '\\$&');
+    }
+
+    function renderizarErro(titulo, detalhe) {
+      return '<div class="error-state">'
+        + '<strong>' + escaparHtml(titulo) + '</strong>'
+        + '<span>' + escaparHtml(detalhe) + '</span>'
+        + '</div>';
+    }
+  }());
+</script>
+
+</body>
+</html>

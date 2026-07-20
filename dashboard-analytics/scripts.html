@@ -1,0 +1,898 @@
+<script>
+const state = {
+  abaAtiva: 'acompanhamento', payload: null, periodo: '30', profissional: 'todos',
+  situacao: 'a_fazer', prazo: 'todos', busca: '', ranking: 'concluidas', carregando: false,
+  anamneses: {}, carregamentosAnamnese: {}, anamneseAtual: '', ultimoFocoAnamnese: null,
+  questionarioGestor: null, questionarioCarregando: false, questionarioAcaoPendente: false,
+};
+
+const QUESTIONNAIRE_DRAFT_KEY = 'dashboard-questionario-rascunho-v1';
+
+const menusTematizados = new Map();
+
+function opcoesMenuTematizado(registro) {
+  return registro && registro.menu ? Array.from(registro.menu.querySelectorAll('[role="option"]')) : [];
+}
+
+function fecharMenusTematizados(retornarFoco) {
+  menusTematizados.forEach(function (registro) {
+    if (!registro.aberto) return;
+    registro.aberto = false;
+    registro.menu.hidden = true;
+    registro.trigger.setAttribute('aria-expanded', 'false');
+    if (retornarFoco && registro.trigger.focus) registro.trigger.focus();
+  });
+}
+
+function posicionarMenuTematizado(registro) {
+  if (!registro || typeof window === 'undefined' || !registro.trigger.getBoundingClientRect) return;
+  const area = registro.trigger.getBoundingClientRect();
+  const altura = Math.min(registro.menu.scrollHeight || 240, Math.max(160, window.innerHeight - 120));
+  const reservaInferior = window.innerWidth <= 640 ? 86 : 16;
+  const abrirAcima = area.bottom + altura > window.innerHeight - reservaInferior && area.top > altura;
+  registro.menu.classList.toggle('opens-upward', abrirAcima);
+}
+
+function abrirMenuTematizado(registro, focarSelecionado) {
+  if (!registro) return;
+  fecharMenusTematizados(false);
+  registro.aberto = true;
+  registro.menu.hidden = false;
+  registro.trigger.setAttribute('aria-expanded', 'true');
+  posicionarMenuTematizado(registro);
+  if (focarSelecionado) {
+    const selecionada = registro.menu.querySelector('[aria-selected="true"]');
+    if (selecionada && selecionada.focus) selecionada.focus();
+  }
+}
+
+function dispararMudancaMenuTematizado(select) {
+  if (typeof Event === 'function') {
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return;
+  }
+  const evento = document.createEvent('Event');
+  evento.initEvent('change', true, false);
+  select.dispatchEvent(evento);
+}
+
+function atualizarMenuTematizado(select) {
+  const registro = menusTematizados.get(select);
+  if (!registro) return;
+  const opcoes = Array.from(select.options || []);
+  const atual = opcoes.find(function (opcao) { return opcao.value === select.value; }) || opcoes[0];
+  registro.triggerLabel.textContent = atual ? atual.textContent : 'Selecionar';
+  registro.menu.innerHTML = '';
+  opcoes.forEach(function (opcao) {
+    const item = document.createElement('button');
+    const selecionada = atual && opcao.value === atual.value;
+    item.type = 'button';
+    item.className = 'themed-select-option';
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', String(!!selecionada));
+    item.textContent = opcao.textContent;
+    item.disabled = !!opcao.disabled;
+    item.addEventListener('click', function () {
+      if (opcao.disabled) return;
+      select.value = opcao.value;
+      atualizarMenuTematizado(select);
+      fecharMenusTematizados(true);
+      dispararMudancaMenuTematizado(select);
+    });
+    item.addEventListener('keydown', function (evento) {
+      const itens = opcoesMenuTematizado(registro).filter(function (botao) { return !botao.disabled; });
+      const indice = itens.indexOf(item);
+      if (evento.key === 'ArrowDown' || evento.key === 'ArrowUp') {
+        evento.preventDefault();
+        const destino = itens[(indice + (evento.key === 'ArrowDown' ? 1 : itens.length - 1)) % itens.length];
+        if (destino) destino.focus();
+      }
+      if (evento.key === 'Escape') {
+        evento.preventDefault();
+        fecharMenusTematizados(true);
+      }
+    });
+    registro.menu.appendChild(item);
+  });
+}
+
+function criarMenuTematizado(select) {
+  if (!select || menusTematizados.has(select) || !select.parentNode) return;
+  const wrapper = document.createElement('div');
+  const trigger = document.createElement('button');
+  const label = document.createElement('span');
+  const seta = document.createElement('span');
+  const menu = document.createElement('div');
+  const menuId = 'themed-select-menu-' + select.id;
+  wrapper.className = 'themed-select';
+  trigger.type = 'button';
+  trigger.className = 'themed-select-trigger';
+  trigger.setAttribute('aria-haspopup', 'listbox');
+  trigger.setAttribute('aria-expanded', 'false');
+  trigger.setAttribute('aria-controls', menuId);
+  label.className = 'themed-select-label';
+  seta.className = 'themed-select-arrow';
+  seta.setAttribute('aria-hidden', 'true');
+  seta.textContent = '⌄';
+  menu.id = menuId;
+  menu.className = 'themed-select-menu';
+  menu.setAttribute('role', 'listbox');
+  menu.hidden = true;
+  trigger.appendChild(label);
+  trigger.appendChild(seta);
+  select.parentNode.insertBefore(wrapper, select);
+  wrapper.appendChild(select);
+  wrapper.appendChild(trigger);
+  wrapper.appendChild(menu);
+  select.classList.add('themed-select-native');
+  const registro = { select: select, wrapper: wrapper, trigger: trigger, triggerLabel: label, menu: menu, aberto: false };
+  menusTematizados.set(select, registro);
+  trigger.addEventListener('click', function () {
+    if (registro.aberto) fecharMenusTematizados(false);
+    else abrirMenuTematizado(registro, false);
+  });
+  trigger.addEventListener('keydown', function (evento) {
+    if (evento.key === 'Escape') {
+      fecharMenusTematizados(false);
+      return;
+    }
+    if (evento.key === 'Enter' || evento.key === ' ' || evento.key === 'ArrowDown' || evento.key === 'ArrowUp') {
+      evento.preventDefault();
+      abrirMenuTematizado(registro, true);
+    }
+  });
+  select.addEventListener('change', function () { atualizarMenuTematizado(select); });
+  atualizarMenuTematizado(select);
+}
+
+function inicializarMenusTematizados() {
+  if (typeof document === 'undefined' || !document.querySelectorAll) return;
+  document.querySelectorAll('select[data-themed-select]').forEach(criarMenuTematizado);
+}
+
+const GUIAS_AJUDA = Object.freeze({
+  kpi_a_fazer: Object.freeze({
+    titulo: 'Demandas a fazer',
+    texto: 'Soma as demandas que ainda não foram transferidas com as que já foram transferidas, mas aguardam a prescrição. Representa o trabalho operacional aberto neste momento.'
+  }),
+  kpi_atrasadas: Object.freeze({
+    titulo: 'Demandas atrasadas',
+    texto: 'Conta demandas abertas há mais de 2 dias corridos. Neste resumo, entram somente as demandas cuja data de entrada está dentro do período selecionado.'
+  }),
+  kpi_sla: Object.freeze({
+    titulo: 'Demandas dentro do SLA',
+    texto: 'Conta demandas abertas com até 2 dias corridos desde a entrada, incluindo as que vencem hoje. O SLA usado pelo dashboard é de 2 dias.'
+  }),
+  kpi_concluidas: Object.freeze({
+    titulo: 'Demandas concluídas da coorte',
+    texto: 'Mostra quantas demandas recebidas no período selecionado atualmente constam como prescritas. É uma visão por data de entrada, não por data de conclusão.'
+  }),
+  lista_demandas: Object.freeze({
+    titulo: 'Como ler os cartões',
+    texto: 'Cada cartão mostra aluno, entrada, responsável, etapa atual, dias decorridos e situação do SLA. “A transferir” e “A prescrever” indicam qual ação ainda falta.'
+  }),
+  grupo_producao: Object.freeze({
+    titulo: 'Grupo Produção',
+    texto: 'Reúne entradas e conclusões pela data em que cada evento ocorreu no período selecionado. O saldo é entradas menos conclusões e pode incluir prescrições recebidas antes do período.'
+  }),
+  metrica_recebidas: Object.freeze({
+    titulo: 'Recebidas',
+    texto: 'Quantidade de anamneses cuja data de entrada está no período selecionado. Mede a demanda nova que chegou ao profissional ou à equipe.'
+  }),
+  metrica_concluidas: Object.freeze({
+    titulo: 'Concluídas',
+    texto: 'Quantidade de prescrições cuja data de conclusão está no período selecionado. Pode incluir demandas recebidas em períodos anteriores.'
+  }),
+  metrica_saldo: Object.freeze({
+    titulo: 'Saldo do período',
+    texto: 'É a diferença entre recebidas e concluídas no período. Saldo positivo significa que entraram mais demandas do que foram finalizadas; não é uma nota de desempenho.'
+  }),
+  grupo_backlog: Object.freeze({
+    titulo: 'Grupo Backlog',
+    texto: 'Mostra o estoque atual de trabalho ainda aberto. Diferentemente das entradas e conclusões, o backlog representa a situação de agora, mesmo que a demanda tenha começado antes do período.'
+  }),
+  metrica_backlog: Object.freeze({
+    titulo: 'Backlog total',
+    texto: 'Total de demandas que ainda não constam como prescritas. Inclui tanto as não transferidas quanto as que aguardam a prescrição.'
+  }),
+  metrica_nao_transferidas: Object.freeze({
+    titulo: 'Não transferidas',
+    texto: 'Demandas que ainda não foram registradas no sistema de prescrição. É a primeira etapa pendente do fluxo.'
+  }),
+  metrica_pendentes: Object.freeze({
+    titulo: 'A prescrever',
+    texto: 'Demandas já transferidas para o sistema, mas que ainda não possuem prescrição concluída com data válida.'
+  }),
+  metrica_atrasadas: Object.freeze({
+    titulo: 'Atrasadas no backlog',
+    texto: 'Demandas atualmente abertas que ultrapassaram o SLA de 2 dias corridos desde a entrada.'
+  }),
+  grupo_velocidade: Object.freeze({
+    titulo: 'Grupo Velocidade',
+    texto: 'Resume o tempo entre a entrada da anamnese e a conclusão da prescrição. Média, mediana e P75 usam apenas conclusões com datas válidas no período.'
+  }),
+  metrica_media: Object.freeze({
+    titulo: 'Tempo médio',
+    texto: 'Soma os dias até a conclusão e divide pela quantidade de prescrições concluídas. Casos muito demorados podem elevar bastante a média.'
+  }),
+  metrica_mediana: Object.freeze({
+    titulo: 'Tempo mediano',
+    texto: 'É o valor central dos tempos ordenados: metade das conclusões levou menos tempo e metade levou mais. Sofre menos influência de casos extremos que a média.'
+  }),
+  metrica_p75: Object.freeze({
+    titulo: 'Percentil 75 (P75)',
+    texto: 'Indica o tempo em que 75% das prescrições foram concluídas. Os 25% restantes demoraram mais que esse valor.'
+  }),
+  metrica_maior_espera: Object.freeze({
+    titulo: 'Maior espera atual',
+    texto: 'Número de dias da demanda aberta mais antiga no recorte do profissional. Ajuda a localizar envelhecimento do backlog.'
+  }),
+  grupo_prazo: Object.freeze({
+    titulo: 'Grupo Prazo e conclusão',
+    texto: 'Combina avanço da coorte recebida, cumprimento do SLA nas conclusões e ritmo semanal estimado. Cada indicador usa uma base diferente, descrita em sua própria ajuda.'
+  }),
+  metrica_taxa_conclusao: Object.freeze({
+    titulo: 'Taxa de conclusão da coorte',
+    texto: 'Percentual das demandas recebidas no período que atualmente já estão concluídas. A base é a data de entrada, por isso difere do volume de conclusões do período.'
+  }),
+  metrica_taxa_sla: Object.freeze({
+    titulo: 'Conclusões dentro do SLA',
+    texto: 'Percentual das prescrições concluídas no período que levaram até 2 dias corridos desde a entrada. Só usa registros com datas válidas.'
+  }),
+  metrica_producao_semanal: Object.freeze({
+    titulo: 'Conclusões por semana',
+    texto: 'Ritmo médio estimado a partir das conclusões e da duração do período selecionado, convertido para uma semana de 7 dias.'
+  }),
+  gargalos: Object.freeze({
+    titulo: 'Gargalos observados',
+    texto: 'Alertas gerados por regras simples, como ausência de conclusões, saldo positivo, atrasos ou amostra pequena. Servem como pontos de verificação e não explicam a causa.'
+  }),
+  tabela_produtividade: Object.freeze({
+    titulo: 'Tabela de profissionais',
+    texto: 'Coloca os mesmos indicadores lado a lado por profissional. A ordenação escolhida destaca apenas uma variável e não cria uma classificação geral de desempenho.'
+  }),
+  comparacao_periodo: Object.freeze({
+    titulo: 'Comparação com o período anterior',
+    texto: 'Compara o período selecionado com o intervalo imediatamente anterior de mesma duração. Exemplo: 30 dias atuais contra os 30 dias anteriores.'
+  }),
+  comparacao_recebidas: Object.freeze({
+    titulo: 'Recebidas: atual x anterior',
+    texto: 'Compara a quantidade de anamneses recebidas no período selecionado com o período anterior equivalente.'
+  }),
+  comparacao_concluidas: Object.freeze({
+    titulo: 'Concluídas: atual x anterior',
+    texto: 'Compara prescrições finalizadas pela data de conclusão nos dois períodos equivalentes, independentemente da data em que entraram.'
+  }),
+  comparacao_backlog: Object.freeze({
+    titulo: 'Backlog na comparação',
+    texto: 'O valor principal é o estoque aberto atual. A variação histórica deve ser lida somente quando houver snapshots diários suficientes, pois o período de entradas não redefine o backlog.'
+  }),
+  comparacao_atrasadas: Object.freeze({
+    titulo: 'Atrasadas na comparação',
+    texto: 'O valor principal mostra atrasos no estoque aberto atual. A referência anterior depende do histórico de snapshots e não deve ser confundida com entradas atrasadas no período.'
+  }),
+  grafico_fluxo: Object.freeze({
+    titulo: 'Entradas x conclusões',
+    texto: 'Compara anamneses recebidas pela data de entrada com prescrições finalizadas pela data de conclusão. As duas linhas usam o mesmo período e a mesma granularidade.'
+  }),
+  grafico_backlog: Object.freeze({
+    titulo: 'Evolução do backlog',
+    texto: 'Mostra quantas demandas estavam abertas em cada ponto do tempo, considerando a data de entrada e a data de conclusão. Valores recentes representam o estoque mais atual.'
+  }),
+  grafico_producao: Object.freeze({
+    titulo: 'Produção por profissional',
+    texto: 'Compara demandas recebidas e prescrições concluídas por profissional no mesmo período. As recebidas usam a data de entrada e as concluídas usam a data de conclusão.'
+  }),
+  grafico_etapas: Object.freeze({
+    titulo: 'Composição do backlog',
+    texto: 'Divide o estoque aberto atual entre demandas ainda não transferidas e demandas já transferidas que aguardam prescrição.'
+  }),
+  grafico_sla: Object.freeze({
+    titulo: 'Cumprimento do SLA',
+    texto: 'Compara o percentual de conclusões realizadas em até 2 dias por profissional. Profissionais sem conclusões válidas podem não aparecer no gráfico.'
+  }),
+  grafico_tempo: Object.freeze({
+    titulo: 'Tempo até a prescrição',
+    texto: 'Compara média, mediana e P75 dos dias até a conclusão. Use a mediana para o caso típico e o P75 para observar a faixa mais lenta.'
+  }),
+  tabela_comparativa: Object.freeze({
+    titulo: 'Tabela comparativa',
+    texto: 'Apresenta em números as mesmas dimensões dos gráficos por profissional. Permite conferir valores exatos sem depender apenas da escala visual.'
+  })
+});
+
+let ajudaAtiva = null;
+
+function el(id) { return typeof document === 'undefined' ? null : document.getElementById(id); }
+function esc(valor) { return String(valor == null ? '' : valor).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+function semAcento(valor) { return String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+function numero(valor) { return valor == null || !Number.isFinite(Number(valor)) ? '—' : new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(Number(valor)); }
+function percentual(valor) { return valor == null || !Number.isFinite(Number(valor)) ? '—' : numero(valor) + '%'; }
+function dias(valor) { return valor == null || !Number.isFinite(Number(valor)) ? '—' : numero(valor) + (Number(valor) === 1 ? ' dia' : ' dias'); }
+function formatarData(valor) { if (!valor) return '—'; const p = String(valor).slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : valor; }
+function criarLinkWhatsappDemanda(numero) {
+  let digitos = String(numero == null ? '' : numero).replace(/\D/g, '');
+  if (digitos.indexOf('00') === 0) digitos = digitos.slice(2);
+  if (digitos.length === 10 || digitos.length === 11) digitos = '55' + digitos;
+  return digitos.length >= 12 && digitos.length <= 15 ? 'https://wa.me/' + digitos : '';
+}
+function formatarRotuloPeriodo(valor) { if (!valor) return ''; const p = String(valor).split('-'); return p.length === 3 ? p[2] + '/' + p[1] : p.length === 2 ? p[1] + '/' + p[0].slice(2) : valor; }
+function rotuloProfissional(nome) { return nome === '__EQUIPE__' ? 'Equipe completa' : (nome || 'Não informado'); }
+
+function valorVazioAnamnese(valor) {
+  return valor == null || valor === '' || valor === false;
+}
+
+function contemAlgumAnamnese(texto, termos) {
+  return termos.some(function (termo) { return texto.indexOf(termo) !== -1; });
+}
+
+function extrairOpcaoAnamnese(campo) {
+  const partes = String(campo || '').match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+  return partes ? { pergunta: partes[1].trim(), opcao: partes[2].trim() } : null;
+}
+
+function categoriaCampoAnamnese(campo) {
+  const texto = semAcento(campo);
+  if (contemAlgumAnamnese(texto,['email','whatsapp','data de nascimento','altura','peso'])) return 'identificacao';
+  if (contemAlgumAnamnese(texto,['experiencia com musculacao','ultimos 3 meses','objetivo principal','dias por semana','tempo voce tem','alem da musculacao'])) return 'perfil_rotina';
+  if (contemAlgumAnamnese(texto,['dor ou desconforto','onde e a dor','intensidade da dor','movimentos pioram','diferenca entre o lado','qual lado','lesao','cirurgia','hernia','doenca','condicao importante','medicamento','dor no peito','desmaio','palpitacao'])) return 'dores_saude';
+  if (contemAlgumAnamnese(texto,['exercicio que voce nao pode','nao se sente seguro','movimento costuma incomodar','restricao'])) return 'restricoes';
+  return 'preferencias';
+}
+
+function formatarValorAnamnese(valor, tipo) {
+  if (valor == null) return '';
+  const texto = String(valor).trim();
+  const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/);
+  if (tipo === 'data' || iso) {
+    if (iso) return iso[3] + '/' + iso[2] + '/' + iso[1];
+    const br = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (br) return String(br[1]).padStart(2,'0') + '/' + String(br[2]).padStart(2,'0') + '/' + br[3];
+  }
+  if (tipo === 'booleano') return valor ? 'Sim' : 'Não';
+  return texto;
+}
+
+function agruparAnamnese(respostas) {
+  const grupos = {};
+  (respostas || []).forEach(function (resposta) {
+    if (!resposta || !resposta.campo || valorVazioAnamnese(resposta.valor)) return;
+    if (semAcento(resposta.campo).indexOf('consentimento') !== -1) return;
+    const chave = categoriaCampoAnamnese(resposta.campo);
+    if (!grupos[chave]) grupos[chave] = { itens: [], chips: {} };
+    const opcao = extrairOpcaoAnamnese(resposta.campo);
+    if (resposta.tipo === 'booleano' && resposta.valor === true && opcao) {
+      if (!grupos[chave].chips[opcao.pergunta]) grupos[chave].chips[opcao.pergunta] = [];
+      grupos[chave].chips[opcao.pergunta].push(opcao.opcao);
+      return;
+    }
+    grupos[chave].itens.push({ campo: resposta.campo, valor: formatarValorAnamnese(resposta.valor, resposta.tipo) });
+  });
+  return grupos;
+}
+
+function renderizarRespostaAnamnese(resposta) {
+  const classe = String(resposta.valor).length > 120 ? ' answer-wide' : '';
+  return '<div class="answer-item' + classe + '"><span class="answer-label">' + esc(resposta.campo) + '</span><span class="answer-value">' + esc(resposta.valor) + '</span></div>';
+}
+
+function renderizarChipsAnamnese(pergunta, opcoes) {
+  return '<div class="answer-item answer-wide"><span class="answer-label">' + esc(pergunta) + '</span><div class="chips">' + opcoes.map(function (opcao) { return '<span class="chip">' + esc(opcao) + '</span>'; }).join('') + '</div></div>';
+}
+
+function renderizarAnamnese(respostas) {
+  const grupos = agruparAnamnese(respostas);
+  const ordem = ['identificacao','perfil_rotina','dores_saude','restricoes','preferencias'];
+  const rotulos = { identificacao:'Identificação', perfil_rotina:'Perfil físico, objetivo e rotina', dores_saude:'Dores, lesões e condições de saúde', restricoes:'Restrições e movimentos', preferencias:'Preferências e observações' };
+  const html = ordem.map(function (chave) {
+    const grupo = grupos[chave];
+    if (!grupo || (!grupo.itens.length && !Object.keys(grupo.chips).length)) return '';
+    const conteudo = grupo.itens.map(renderizarRespostaAnamnese).join('') + Object.keys(grupo.chips).map(function (pergunta) { return renderizarChipsAnamnese(pergunta, grupo.chips[pergunta]); }).join('');
+    return '<details class="anamnesis-section"' + (chave === 'perfil_rotina' ? ' open' : '') + '><summary class="anamnesis-title">' + esc(rotulos[chave]) + '</summary><div class="answer-list">' + conteudo + '</div></details>';
+  }).join('');
+  return html || '<div class="empty-state">Nenhuma resposta disponível para esta anamnese.</div>';
+}
+
+function botaoAjuda(chave) {
+  return '<button class="help-button" type="button" data-help="' + esc(chave) + '" aria-label="Entender este indicador" aria-controls="helpPopover" aria-expanded="false">?</button>';
+}
+
+function posicionarAjuda(ancora) {
+  const popover = el('helpPopover');
+  if (!popover || !ancora || typeof window === 'undefined' || window.innerWidth <= 640) return;
+  const margem = 12;
+  const ancoraRect = ancora.getBoundingClientRect();
+  const popoverRect = popover.getBoundingClientRect();
+  let esquerda = ancoraRect.right - popoverRect.width;
+  esquerda = Math.max(margem, Math.min(esquerda, window.innerWidth - popoverRect.width - margem));
+  let topo = ancoraRect.bottom + 8;
+  if (topo + popoverRect.height > window.innerHeight - margem) topo = ancoraRect.top - popoverRect.height - 8;
+  topo = Math.max(margem, Math.min(topo, window.innerHeight - popoverRect.height - margem));
+  popover.style.left = esquerda + 'px';
+  popover.style.top = topo + 'px';
+}
+
+function abrirAjuda(chave, ancora) {
+  const guia = GUIAS_AJUDA[chave];
+  const popover = el('helpPopover');
+  if (!guia || !popover) return;
+  if (ajudaAtiva && ajudaAtiva !== ancora) ajudaAtiva.setAttribute('aria-expanded', 'false');
+  ajudaAtiva = ancora || null;
+  const titulo = el('helpTitle');
+  const texto = el('helpText');
+  if (titulo) titulo.textContent = guia.titulo;
+  if (texto) texto.textContent = guia.texto;
+  popover.hidden = false;
+  if (ajudaAtiva) ajudaAtiva.setAttribute('aria-expanded', 'true');
+  posicionarAjuda(ajudaAtiva);
+}
+
+function fecharAjuda(devolverFoco) {
+  const popover = el('helpPopover');
+  if (popover) popover.hidden = true;
+  if (ajudaAtiva) {
+    ajudaAtiva.setAttribute('aria-expanded', 'false');
+    if (devolverFoco && typeof ajudaAtiva.focus === 'function') ajudaAtiva.focus();
+  }
+  ajudaAtiva = null;
+}
+
+function mockPayload() {
+  const fatos = [
+    { submissionId:'SYN-001', aluno:'Pessoa Alfa', profissional:'Profissional A', dataEntrada:'2026-07-13', transferida:false, prescrita:false, dataConclusao:'', status:'nao_transferida', idadeDias:0, tempoConclusaoDias:null, sla:'dentro_prazo' },
+    { submissionId:'SYN-002', aluno:'Pessoa Beta', profissional:'Profissional B', dataEntrada:'2026-07-10', transferida:true, prescrita:false, dataConclusao:'', status:'pendente', idadeDias:3, tempoConclusaoDias:null, sla:'atrasada' },
+    { submissionId:'SYN-003', aluno:'Pessoa Gama', profissional:'Profissional A', dataEntrada:'2026-07-08', transferida:true, prescrita:true, dataConclusao:'2026-07-09', status:'prescrita', idadeDias:5, tempoConclusaoDias:1, sla:'dentro_prazo' },
+  ];
+  const profs = [
+    { profissional:'Profissional A', recebidas:2, concluidas:1, saldo:1, backlog:1, naoTransferidas:1, pendentes:0, atrasadas:0, taxaConclusao:50, taxaSla:100, tempoMedio:1, tempoMediano:1, tempoP75:1, maiorEspera:0, amostraInsuficiente:true },
+    { profissional:'Profissional B', recebidas:1, concluidas:0, saldo:1, backlog:1, naoTransferidas:0, pendentes:1, atrasadas:1, taxaConclusao:0, taxaSla:null, tempoMedio:null, tempoMediano:null, tempoP75:null, maiorEspera:3, amostraInsuficiente:true },
+  ];
+  const equipe = { profissional:'__EQUIPE__', recebidas:3, concluidas:1, saldo:2, backlog:2, naoTransferidas:1, pendentes:1, atrasadas:1, taxaConclusao:33.3, taxaSla:100, tempoMedio:1, tempoMediano:1, tempoP75:1, maiorEspera:3, producaoDiaria:0.03, producaoSemanal:0.2, amostraInsuficiente:true };
+  return { ok:true, meta:{ atualizadoEm:'2026-07-13T13:00:00-03:00', inicio:'2026-06-14', fim:'2026-07-13', granularidade:'diaria', slaDias:2 }, filtros:{ profissionais:['Profissional A','Profissional B'] }, acompanhamento:fatos, produtividade:{ equipe:equipe, porProfissional:profs, diagnosticos:[{ severidade:'atencao', titulo:'Backlog em crescimento', detalhe:'As entradas superaram as conclusões no período.' }], comparacaoAnterior:{ recebidas:{atual:3,anterior:2,variacaoAbsoluta:1,variacaoPercentual:50}, concluidas:{atual:1,anterior:2,variacaoAbsoluta:-1,variacaoPercentual:-50}, backlog:{atual:2,anterior:1,variacaoAbsoluta:1,variacaoPercentual:100}, atrasadas:{atual:1,anterior:0,variacaoAbsoluta:1,variacaoPercentual:null} } }, comparativos:{ serieFluxo:[{periodo:'2026-07-08',entradas:1,conclusoes:0},{periodo:'2026-07-09',entradas:0,conclusoes:1},{periodo:'2026-07-10',entradas:1,conclusoes:0},{periodo:'2026-07-13',entradas:1,conclusoes:0}], serieBacklog:[{periodo:'2026-07-08',backlog:1},{periodo:'2026-07-09',backlog:0},{periodo:'2026-07-10',backlog:1},{periodo:'2026-07-13',backlog:2}], porProfissional:profs, tabela:profs, atualAnterior:{} }, qualidade:[] };
+}
+
+function mockAnamnese(submissionId) {
+  return {
+    submissionId: submissionId || 'SYN-001', aluno: 'Pessoa Exemplo', profissional: 'Profissional A', dataResposta: '2026-07-13',
+    whatsapp: '',
+    respostas: [
+      { campo:'Data de nascimento', valor:'1990-03-18', tipo:'data' },
+      { campo:'Altura em centímetros', valor:172, tipo:'numero' },
+      { campo:'Qual é sua experiência com musculação?', valor:'Entre 1 e 3 anos', tipo:'texto' },
+      { campo:'Qual seu objetivo principal agora?', valor:'Saúde e condicionamento', tipo:'texto' },
+      { campo:'Quantos dias por semana você consegue treinar de verdade?', valor:4, tipo:'numero' },
+      { campo:'Você sente alguma dor ou desconforto hoje que possa interferir no treino?', valor:true, tipo:'booleano' },
+      { campo:'Onde é a dor ou desconforto?', valor:'Ombro direito', tipo:'texto' },
+      { campo:'Existe algum exercício que você não pode fazer?', valor:'Evitar movimentos acima da cabeça', tipo:'texto' },
+      { campo:'Preferência de treino', valor:'Sessões objetivas', tipo:'texto' }
+    ]
+  };
+}
+
+function mockQuestionarioGestor() {
+  const campos = [
+    { codigo:'profissional',cabecalho:'Profissional',rotulo:'Nome do profissional',tipo:'profissional',obrigatorio:true,opcoes:[],ordem:1 },
+    { codigo:'nomeCompleto',cabecalho:'Nome completo',rotulo:'Nome completo',tipo:'texto',obrigatorio:true,opcoes:[],ordem:2 },
+    { codigo:'whatsapp',cabecalho:'Whatsapp',rotulo:'WhatsApp',tipo:'tel',obrigatorio:true,opcoes:[],ordem:3 },
+  ];
+  return { ativa:{questionarioId:'anamnese_inicial',nome:'Anamnese inicial',versao:'v2',status:'Ativa',revisao:1,etapas:[{id:'etapa_1',titulo:'Identificação',ordem:1,campos:campos}]},rascunho:null,arquivadas:[],proximaVersao:'v3',atualizadoEm:new Date().toISOString() };
+}
+
+function chamarServidor(nome) {
+  const args = Array.prototype.slice.call(arguments, 1);
+  if (typeof google === 'undefined' || !google.script || !google.script.run) {
+    if (nome === 'getAnamneseDashboardAnalytics') return Promise.resolve(mockAnamnese(args[0]));
+    if (nome === 'getQuestionarioGestorAnalytics') return Promise.resolve(mockQuestionarioGestor());
+    if (nome === 'salvarRascunhoQuestionarioGestorAnalytics' || nome === 'publicarQuestionarioGestorAnalytics') {
+      const estado = mockQuestionarioGestor();
+      if (nome === 'publicarQuestionarioGestorAnalytics') estado.ativa = Object.assign({}, args[0], { status:'Ativa', revisao:(args[1] || 0) + 1 });
+      else estado.rascunho = Object.assign({}, args[0], { status:'Rascunho', revisao:(args[1] || 0) + 1 });
+      return Promise.resolve(estado);
+    }
+    if (nome === 'excluirDemandaAnalytics') return Promise.resolve({ ok: true, submissionId: args[0] && args[0].submissionId });
+    return Promise.resolve(mockPayload());
+  }
+  return new Promise(function (resolve, reject) {
+    const runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+    runner[nome].apply(runner, args);
+  });
+}
+
+function filtrarPorSituacao(itens, situacao) {
+  if (situacao === 'todos') return (itens || []).slice();
+  if (situacao === 'a_fazer') return (itens || []).filter(function (item) { return item.status === 'nao_transferida' || item.status === 'pendente' || item.status === 'inconsistente'; });
+  return (itens || []).filter(function (item) { return item.status === situacao; });
+}
+
+function dentroPeriodo(item) {
+  if (state.periodo === 'todos') return true;
+  const diasSelecionados = Number(state.periodo), fim = new Date((state.payload.meta.fim || '').slice(0,10) + 'T12:00:00');
+  if (!Number.isFinite(fim.getTime())) return true;
+  const inicio = new Date(fim); inicio.setDate(inicio.getDate() - diasSelecionados + 1);
+  return item.dataEntrada >= inicio.toISOString().slice(0,10);
+}
+
+function filtrarAcompanhamento() {
+  let itens = filtrarPorSituacao(state.payload ? state.payload.acompanhamento : [], state.situacao);
+  const busca = semAcento(state.busca);
+  itens = itens.filter(function (item) {
+    return dentroPeriodo(item) && (state.profissional === 'todos' || item.profissional === state.profissional)
+      && (state.prazo === 'todos' || item.sla === state.prazo)
+      && (!busca || semAcento(item.aluno + ' ' + item.submissionId).includes(busca));
+  });
+  const prioridade = { atrasada:0, vence_hoje:1, dentro_prazo:2, sem_data:3 };
+  return itens.sort(function (a,b) { return (prioridade[a.sla] - prioridade[b.sla]) || String(a.dataEntrada).localeCompare(String(b.dataEntrada)); });
+}
+
+function kpi(valor, rotulo, tone, ajuda) { return '<article class="kpi" style="--tone:' + tone + '">' + botaoAjuda(ajuda) + '<strong>' + esc(valor) + '</strong><span>' + esc(rotulo) + '</span></article>'; }
+function renderizarAcompanhamento() {
+  if (!state.payload) return;
+  const todos = state.payload.acompanhamento.filter(function (x) { return dentroPeriodo(x) && (state.profissional === 'todos' || x.profissional === state.profissional); });
+  const abertos = todos.filter(function (x) { return x.status !== 'prescrita'; });
+  const kpis = el('acompanhamentoKpis');
+  if (kpis) kpis.innerHTML = kpi(abertos.length,'A fazer','#ff9f1c','kpi_a_fazer') + kpi(abertos.filter(function(x){return x.sla==='atrasada';}).length,'Atrasadas','#ff6262','kpi_atrasadas') + kpi(abertos.filter(function(x){return x.sla==='dentro_prazo'||x.sla==='vence_hoje';}).length,'Dentro do SLA','#dfff32','kpi_sla') + kpi(todos.filter(function(x){return x.status==='prescrita';}).length,'Concluídas','#25d366','kpi_concluidas');
+  const itens = filtrarAcompanhamento(), count = el('itemCount'); if (count) count.textContent = itens.length + (itens.length === 1 ? ' item' : ' itens');
+  const lista = el('demandList'); if (!lista) return;
+  if (!itens.length) { lista.innerHTML = '<div class="empty-state"><strong>Nenhuma demanda neste recorte.</strong><br>Ajuste os filtros para ampliar a busca.</div>'; return; }
+  const rotulos = { nao_transferida:'A transferir', pendente:'A prescrever', prescrita:'Concluída', inconsistente:'Revisar dados' };
+  const tons = { nao_transferida:'#ff9f1c', pendente:'#75a7ff', prescrita:'#25d366', inconsistente:'#ff6262' };
+  const badges = { atrasada:['Atrasada','red'], vence_hoje:['Vence hoje','amber'], dentro_prazo:['No prazo','green'], sem_data:['Sem data','blue'] };
+  lista.innerHTML = itens.map(function (item) {
+    const b = badges[item.sla] || badges.sem_data;
+    const whatsapp = urlWhatsappGestor(item.whatsapp);
+    const contato = whatsapp ? '<a class="whatsapp-action" data-whatsapp-link href="' + esc(whatsapp) + '" target="_blank" rel="noopener" aria-label="Abrir conversa no WhatsApp com ' + esc(item.aluno || 'aluno') + '">WhatsApp ↗</a>' : '';
+    return '<article class="demand-card" role="button" tabindex="0" data-open-anamnesis="' + esc(item.submissionId) + '" aria-label="Abrir anamnese de ' + esc(item.aluno || 'aluno') + '" style="--tone:' + tons[item.status] + '"><div><h4>' + esc(item.aluno || 'Aluno não informado') + '</h4><div class="meta"><span>Entrada ' + formatarData(item.dataEntrada) + '</span><span>ID ' + esc(item.submissionId) + '</span>' + (item.dataConclusao ? '<span>Conclusão ' + formatarData(item.dataConclusao) + '</span>' : '') + '</div></div><div class="owner"><span>Responsável</span><strong>' + esc(item.profissional || 'Não informado') + '</strong></div><div class="stage"><span>' + esc(rotulos[item.status]) + '</span><strong>' + (item.status === 'prescrita' ? dias(item.tempoConclusaoDias) : dias(item.idadeDias)) + '</strong><i class="badge ' + b[1] + '">' + b[0] + '</i></div><div class="demand-actions"><span class="view-anamnesis-action">Ver anamnese <span aria-hidden="true">↗</span></span>' + contato + '</div></article>';
+  }).join('');
+}
+
+function carregarAnamnese(submissionId, forcar) {
+  if (!forcar && state.anamneses[submissionId]) return Promise.resolve(state.anamneses[submissionId]);
+  if (!forcar && state.carregamentosAnamnese[submissionId]) return state.carregamentosAnamnese[submissionId];
+  const carregamento = chamarServidor('getAnamneseDashboardAnalytics', submissionId).then(function (ficha) {
+    state.anamneses[submissionId] = ficha;
+    return ficha;
+  }).finally(function () { delete state.carregamentosAnamnese[submissionId]; });
+  state.carregamentosAnamnese[submissionId] = carregamento;
+  return carregamento;
+}
+
+function renderizarConteudoAnamnese(ficha) {
+  if (state.anamneseAtual !== ficha.submissionId) return;
+  const titulo = el('anamnesisTitle'), subtitulo = el('anamnesisSubtitle'), conteudo = el('anamnesisContent');
+  if (titulo) titulo.textContent = ficha.aluno || 'Aluno não informado';
+  if (subtitulo) subtitulo.textContent = [formatarData(ficha.dataResposta), ficha.profissional || 'Profissional não informado'].join(' · ');
+  const whatsapp = el('anamnesisWhatsapp');
+  if (whatsapp) {
+    const link = criarLinkWhatsappDemanda(ficha.whatsapp);
+    whatsapp.hidden = !link;
+    whatsapp.href = link || '#';
+  }
+  if (conteudo) { conteudo.innerHTML = renderizarAnamnese(ficha.respostas); conteudo.scrollTop = 0; }
+  atualizarControleExpansaoAnamnese();
+}
+
+function renderizarErroAnamnese(erro) {
+  const conteudo = el('anamnesisContent');
+  if (!conteudo) return;
+  conteudo.innerHTML = '<div class="anamnesis-error"><strong>Não foi possível carregar esta anamnese.</strong><span>' + esc((erro && erro.message) || 'Tente novamente em alguns instantes.') + '</span><button class="retry-anamnesis" type="button" data-retry-anamnesis>Tentar novamente</button></div>';
+}
+
+function abrirAnamnese(submissionId, elementoFoco) {
+  const registro = state.payload && state.payload.acompanhamento.find(function (item) { return item.submissionId === submissionId; });
+  if (!registro) { mostrarAviso('Não foi possível localizar esta demanda.','erro'); return; }
+  fecharAjuda(false);
+  state.anamneseAtual = submissionId;
+  state.ultimoFocoAnamnese = elementoFoco || (typeof document !== 'undefined' ? document.activeElement : null);
+  const modal = el('anamnesisModal'), titulo = el('anamnesisTitle'), subtitulo = el('anamnesisSubtitle'), conteudo = el('anamnesisContent');
+  if (!modal || !conteudo) return;
+  if (titulo) titulo.textContent = registro.aluno || 'Aluno não informado';
+  if (subtitulo) subtitulo.textContent = [formatarData(registro.dataEntrada), registro.profissional || 'Profissional não informado'].join(' · ');
+  const whatsapp = el('anamnesisWhatsapp'); if (whatsapp) { whatsapp.hidden = true; whatsapp.href = '#'; }
+  modal.hidden = false;
+  document.body.classList.add('modal-open');
+  if (state.anamneses[submissionId]) renderizarConteudoAnamnese(state.anamneses[submissionId]);
+  else {
+    conteudo.innerHTML = '<div class="anamnesis-loading" aria-live="polite"><strong>Carregando anamnese</strong><div class="boot-track" aria-hidden="true"><i></i></div></div>';
+    carregarAnamnese(submissionId, false).then(renderizarConteudoAnamnese).catch(function (erro) { if (state.anamneseAtual === submissionId) renderizarErroAnamnese(erro); });
+  }
+  if (typeof window !== 'undefined' && window.requestAnimationFrame) window.requestAnimationFrame(function () { const fechar = el('anamnesisClose'); if (fechar) fechar.focus(); });
+}
+
+function fecharAnamnese(devolverFoco) {
+  const modal = el('anamnesisModal');
+  if (modal) modal.hidden = true;
+  if (typeof document !== 'undefined' && document.body) document.body.classList.remove('modal-open');
+  state.anamneseAtual = '';
+  if (devolverFoco && state.ultimoFocoAnamnese && typeof state.ultimoFocoAnamnese.focus === 'function') state.ultimoFocoAnamnese.focus();
+  state.ultimoFocoAnamnese = null;
+}
+
+function atualizarControleExpansaoAnamnese() {
+  const conteudo = el('anamnesisContent'), botao = el('anamnesisExpandToggle');
+  if (!conteudo || !botao) return;
+  const secoes = Array.from(conteudo.querySelectorAll('.anamnesis-section'));
+  const todasAbertas = secoes.length > 0 && secoes.every(function (secao) { return secao.open; });
+  botao.disabled = !secoes.length;
+  botao.setAttribute('aria-label', todasAbertas ? 'Recolher todos os blocos' : 'Expandir todos os blocos');
+  botao.title = botao.getAttribute('aria-label');
+}
+
+function alternarBlocosAnamnese() {
+  const conteudo = el('anamnesisContent');
+  if (!conteudo) return;
+  const secoes = Array.from(conteudo.querySelectorAll('.anamnesis-section'));
+  const abrir = secoes.some(function (secao) { return !secao.open; });
+  secoes.forEach(function (secao) { secao.open = abrir; });
+  atualizarControleExpansaoAnamnese();
+}
+
+function tentarNovamenteAnamnese() {
+  const id = state.anamneseAtual, conteudo = el('anamnesisContent');
+  if (!id || !conteudo) return;
+  conteudo.innerHTML = '<div class="anamnesis-loading" aria-live="polite"><strong>Carregando anamnese</strong><div class="boot-track" aria-hidden="true"><i></i></div></div>';
+  carregarAnamnese(id, true).then(renderizarConteudoAnamnese).catch(renderizarErroAnamnese);
+}
+
+function excluirDemandaAtual() {
+  const submissionId = state.anamneseAtual;
+  if (!submissionId || typeof window === 'undefined' || typeof window.prompt !== 'function') return;
+  const confirmacao = window.prompt('Esta ação apaga definitivamente a demanda de Respostas e Monitoramento. Digite EXCLUIR para confirmar.');
+  if (confirmacao === null) return;
+  if (String(confirmacao).trim() !== 'EXCLUIR') {
+    mostrarAviso('A demanda não foi excluída: a confirmação deve ser EXCLUIR.', 'erro');
+    return;
+  }
+  const motivo = window.prompt('Motivo da exclusão (opcional):');
+  if (motivo === null) return;
+  const botao = el('anamnesisDelete');
+  if (botao) botao.disabled = true;
+  chamarServidor('excluirDemandaAnalytics', { submissionId: submissionId, confirmacao: confirmacao, motivo: motivo }).then(function () {
+    delete state.anamneses[submissionId];
+    fecharAnamnese(true);
+    mostrarAviso('Demanda excluída de Respostas e Monitoramento.', 'ok');
+    return carregarDados(true);
+  }).catch(function (erro) {
+    mostrarAviso('Não foi possível excluir a demanda: ' + ((erro && erro.message) || erro), 'erro');
+  }).finally(function () {
+    if (botao) botao.disabled = false;
+  });
+}
+
+function produtividadeSelecionada() {
+  if (!state.payload) return null;
+  if (state.profissional === 'todos') return state.payload.produtividade.equipe;
+  return state.payload.produtividade.porProfissional.find(function (p) { return p.profissional === state.profissional; }) || null;
+}
+function metricItem(valor, label, ajuda) { return '<div class="metric-item">' + botaoAjuda(ajuda) + '<strong>' + valor + '</strong><span>' + esc(label) + '</span></div>'; }
+function metricGroup(titulo, itens, ajuda) { return '<section class="metric-group"><div class="metric-group-title"><h3>' + esc(titulo) + '</h3>' + botaoAjuda(ajuda) + '</div><div class="metric-row">' + itens.join('') + '</div></section>'; }
+function diagnosticosSelecionados(p) {
+  const a = [];
+  if (!p.concluidas && p.backlog) a.push({severidade:'critico',titulo:'Sem conclusões no período',detalhe:'Há demandas abertas sem produção concluída no recorte.'});
+  if (p.saldo > 0) a.push({severidade:'atencao',titulo:'Backlog em crescimento',detalhe:'Entraram ' + p.saldo + ' demanda(s) a mais do que foram concluídas.'});
+  if (p.atrasadas) a.push({severidade:'atencao',titulo:'Demandas fora do SLA',detalhe:p.atrasadas + ' demanda(s) aguardam há mais de 2 dias.'});
+  if (p.amostraInsuficiente) a.push({severidade:'informativo',titulo:'Amostra pequena',detalhe:'Interprete médias e tendência com cautela: há menos de 5 conclusões.'});
+  return a.length ? a : [{severidade:'informativo',titulo:'Sem gargalo crítico no recorte',detalhe:'Acompanhe a tendência e as demandas individuais.'}];
+}
+function renderizarProdutividade() {
+  const p = produtividadeSelecionada(); if (!p) return;
+  const contexto = el('productivityContext'); if (contexto) contexto.innerHTML = '<strong>' + esc(rotuloProfissional(p.profissional)) + '</strong> · período de ' + formatarData(state.payload.meta.inicio) + ' a ' + formatarData(state.payload.meta.fim);
+  const metrics = el('productivityMetrics');
+  if (metrics) metrics.innerHTML =
+    metricGroup('Produção',[
+      metricItem(numero(p.recebidas),'Recebidas','metrica_recebidas'),
+      metricItem(numero(p.concluidas),'Concluídas','metrica_concluidas'),
+      metricItem((p.saldo>0?'+':'')+numero(p.saldo),'Saldo','metrica_saldo')
+    ],'grupo_producao') +
+    metricGroup('Backlog',[
+      metricItem(numero(p.backlog),'Total','metrica_backlog'),
+      metricItem(numero(p.naoTransferidas),'Não transferidas','metrica_nao_transferidas'),
+      metricItem(numero(p.pendentes),'A prescrever','metrica_pendentes'),
+      metricItem(numero(p.atrasadas),'Atrasadas','metrica_atrasadas')
+    ],'grupo_backlog') +
+    metricGroup('Velocidade',[
+      metricItem(dias(p.tempoMedio),'Média','metrica_media'),
+      metricItem(dias(p.tempoMediano),'Mediana','metrica_mediana'),
+      metricItem(dias(p.tempoP75),'P75','metrica_p75'),
+      metricItem(dias(p.maiorEspera),'Maior espera','metrica_maior_espera')
+    ],'grupo_velocidade') +
+    metricGroup('Prazo e conclusão',[
+      metricItem(percentual(p.taxaConclusao),'Taxa de conclusão','metrica_taxa_conclusao'),
+      metricItem(percentual(p.taxaSla),'Dentro do SLA','metrica_taxa_sla'),
+      metricItem(numero(p.producaoSemanal),'Conclusões/semana','metrica_producao_semanal')
+    ],'grupo_prazo');
+  const dl = el('diagnosticList'); if (dl) dl.innerHTML = diagnosticosSelecionados(p).map(function(d){return '<article class="diagnostic '+d.severidade+'"><strong>'+esc(d.titulo)+'</strong><p>'+esc(d.detalhe)+'</p></article>';}).join('');
+  let profissionais = state.payload.produtividade.porProfissional.slice();
+  profissionais.sort(function(a,b){ const av=a[state.ranking],bv=b[state.ranking]; return (bv==null?-Infinity:bv)-(av==null?-Infinity:av); });
+  const tbody = el('productivityTable'); if (tbody) tbody.innerHTML = profissionais.map(function(x){return '<tr><td>'+esc(x.profissional)+'</td><td>'+numero(x.recebidas)+'</td><td>'+numero(x.concluidas)+'</td><td>'+numero(x.backlog)+'</td><td>'+numero(x.atrasadas)+'</td><td>'+percentual(x.taxaSla)+'</td><td>'+dias(x.tempoMediano)+'</td></tr>';}).join('');
+}
+
+function deltaCard(rotulo, item, ajuda) { if (!item) return ''; const sinal=item.variacaoAbsoluta>0?'+':''; return '<article class="delta-card">'+botaoAjuda(ajuda)+'<span>'+esc(rotulo)+'</span><strong>'+numero(item.atual)+'</strong><small>'+sinal+numero(item.variacaoAbsoluta)+' vs. período anterior</small></article>'; }
+function renderizarComparativos() {
+  if (!state.payload) return;
+  const comp = state.payload.produtividade.comparacaoAnterior || {}, resumo=el('comparisonSummary');
+  if(resumo) resumo.innerHTML=deltaCard('Recebidas',comp.recebidas,'comparacao_recebidas')+deltaCard('Concluídas',comp.concluidas,'comparacao_concluidas')+deltaCard('Backlog',comp.backlog,'comparacao_backlog')+deltaCard('Atrasadas',comp.atrasadas,'comparacao_atrasadas');
+  const flow=el('flowChart'); if(flow) flow.innerHTML=renderLineChart(state.payload.comparativos.serieFluxo,{titulo:'Entradas e conclusões',series:[{campo:'entradas',rotulo:'Entradas'},{campo:'conclusoes',rotulo:'Conclusões',classe:'secondary'}]});
+  const backlog=el('backlogChart'); if(backlog) backlog.innerHTML=renderLineChart(state.payload.comparativos.serieBacklog,{titulo:'Backlog histórico',campo:'backlog',rotulo:'Backlog'});
+  const profs=state.payload.comparativos.porProfissional || [], chart=el('professionalChart'); if(chart) chart.innerHTML=renderBarChart(profs.map(function(p){return Object.assign({rotulo:p.profissional},p);}),{titulo:'Produção por profissional',series:[{campo:'recebidas',rotulo:'Recebidas'},{campo:'concluidas',rotulo:'Concluídas',classe:'secondary'}]});
+  const porProfissional=profs.map(function(p){return Object.assign({rotulo:p.profissional},p);});
+  const etapas=el('backlogStageChart'); if(etapas) etapas.innerHTML=renderBarChart(porProfissional,{titulo:'Composição do backlog por profissional',series:[{campo:'naoTransferidas',rotulo:'Não transferidas'},{campo:'pendentes',rotulo:'A prescrever',classe:'secondary'}]});
+  const sla=el('slaChart'); if(sla) sla.innerHTML=renderBarChart(porProfissional.filter(function(p){return p.taxaSla!=null;}),{titulo:'Cumprimento do SLA por profissional',campo:'taxaSla',rotulo:'Dentro do SLA (%)'});
+  const tempos=el('timeChart'); if(tempos) tempos.innerHTML=renderBarChart(porProfissional.filter(function(p){return p.tempoMedio!=null||p.tempoMediano!=null||p.tempoP75!=null;}),{titulo:'Tempo até a prescrição por profissional',series:[{campo:'tempoMedio',rotulo:'Média'},{campo:'tempoMediano',rotulo:'Mediana',classe:'secondary'},{campo:'tempoP75',rotulo:'P75',classe:'tertiary'}]});
+  const caption=el('flowCaption'); if(caption) caption.textContent=state.payload.meta.granularidade==='diaria'?'Visão diária':state.payload.meta.granularidade==='semanal'?'Visão semanal':'Visão mensal';
+  const tbody=el('comparisonTable'); if(tbody) tbody.innerHTML=profs.map(function(x){return '<tr><td>'+esc(x.profissional)+'</td><td>'+numero(x.recebidas)+'</td><td>'+numero(x.concluidas)+'</td><td>'+numero(x.saldo)+'</td><td>'+numero(x.naoTransferidas)+'</td><td>'+numero(x.pendentes)+'</td><td>'+percentual(x.taxaSla)+'</td><td>'+dias(x.tempoP75)+'</td></tr>';}).join('');
+}
+
+function clonarQuestionario(valor) { return JSON.parse(JSON.stringify(valor)); }
+function gerarIdQuestionario(prefixo) { return prefixo + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function rascunhoLocalQuestionario() { try { const texto = window.localStorage.getItem(QUESTIONNAIRE_DRAFT_KEY); return texto ? JSON.parse(texto) : null; } catch (erro) { return null; } }
+function salvarRascunhoLocalQuestionario() { try { const r = state.questionarioGestor && state.questionarioGestor.rascunho; if (r) window.localStorage.setItem(QUESTIONNAIRE_DRAFT_KEY, JSON.stringify(r)); else window.localStorage.removeItem(QUESTIONNAIRE_DRAFT_KEY); } catch (erro) {} }
+function proximaVersaoLocalQuestionario() { return state.questionarioGestor && state.questionarioGestor.proximaVersao || 'v3'; }
+function normalizarWhatsappGestor(valor) { let numero = String(valor || '').replace(/\D/g, ''); if (numero.indexOf('00') === 0) numero = numero.slice(2); if ((numero.length === 10 || numero.length === 11) && numero.indexOf('55') !== 0) numero = '55' + numero; return numero.length >= 12 && numero.length <= 13 ? numero : ''; }
+function urlWhatsappGestor(valor) { const numero = normalizarWhatsappGestor(valor); return numero ? 'https://wa.me/' + numero : ''; }
+
+function validarRascunhoQuestionarioLocal(rascunho) {
+  const erros = [], protegidos = { profissional:'profissional', nomeCompleto:'texto', whatsapp:'tel' }, vistos = {};
+  const etapas = rascunho && rascunho.etapas || [];
+  if (!etapas.length) erros.push('Crie ao menos uma etapa.');
+  etapas.forEach(function (etapa) {
+    if (!String(etapa.titulo || '').trim()) erros.push('Dê um nome a todas as etapas.');
+    if (!etapa.campos || !etapa.campos.length) erros.push('Cada etapa precisa ter ao menos uma pergunta.');
+    (etapa.campos || []).forEach(function (campo) {
+      if (!String(campo.rotulo || '').trim()) erros.push('Toda pergunta precisa ter texto.');
+      if (!String(campo.codigo || '').trim() || vistos[campo.codigo]) erros.push('Os códigos das perguntas precisam ser únicos.');
+      vistos[campo.codigo] = campo;
+      if (['unica','multipla','select'].indexOf(campo.tipo) >= 0) {
+        const opcoes = (campo.opcoes || []).map(function (opcao) { return String(opcao).trim().toLowerCase(); }).filter(Boolean);
+        if (new Set(opcoes).size < 2) erros.push('Perguntas de escolha precisam de duas opções diferentes.');
+      }
+    });
+  });
+  Object.keys(protegidos).forEach(function (codigo) {
+    const campo = vistos[codigo];
+    if (!campo || campo.tipo !== protegidos[codigo] || campo.obrigatorio === false) erros.push('O campo obrigatório "' + codigo + '" precisa permanecer no formulário.');
+  });
+  return erros;
+}
+
+function renderizarVersaoQuestionario(versao, titulo, acao) {
+  if (!versao) return '';
+  return '<article class="questionnaire-summary"><div><span class="eyebrow">' + esc(titulo) + '</span><h3>' + esc(versao.nome || 'Anamnese inicial') + ' · ' + esc(versao.versao) + '</h3><p>' + versao.etapas.length + ' etapa(s) · ' + versao.etapas.reduce(function (total, etapa) { return total + (etapa.campos || []).length; }, 0) + ' pergunta(s)</p></div>' + (acao || '') + '</article>';
+}
+
+function renderizarQuestionarioGestor() {
+  const status = el('questionnaireStatus'), editor = el('questionnaireEditor');
+  const dados = state.questionarioGestor;
+  if (!status || !editor) return;
+  if (state.questionarioCarregando) { status.innerHTML = '<div class="questionnaire-empty">Carregando o questionário…</div>'; editor.innerHTML = ''; return; }
+  if (!dados) { status.innerHTML = '<div class="questionnaire-empty">Não foi possível carregar o questionário.</div>'; editor.innerHTML = ''; return; }
+  const acaoAtiva = dados.rascunho ? '' : '<div class="questionnaire-actions"><button class="questionnaire-button primary" type="button" data-questionnaire-action="create-version">Criar nova versão</button></div>';
+  status.innerHTML = renderizarVersaoQuestionario(dados.ativa, 'Em uso agora', acaoAtiva)
+    + (dados.rascunho ? renderizarVersaoQuestionario(dados.rascunho, 'Rascunho em edição', '<div class="questionnaire-actions"><button class="questionnaire-button" type="button" data-questionnaire-action="save">Salvar rascunho</button><button class="questionnaire-button primary" type="button" data-questionnaire-action="publish">Publicar versão</button></div>') : '')
+    + ((dados.arquivadas || []).length ? '<div class="questionnaire-empty">Versões anteriores: ' + dados.arquivadas.map(function (versao) { return esc(versao.versao); }).join(', ') + '.</div>' : '');
+  const rascunho = dados.rascunho;
+  if (!rascunho) { editor.innerHTML = '<div class="questionnaire-empty">Crie uma nova versão para começar a editar. A versão em uso não é alterada.</div>'; return; }
+  const erros = validarRascunhoQuestionarioLocal(rascunho);
+  editor.innerHTML = '<section class="questionnaire-card"><div class="questionnaire-card-header"><div><span class="eyebrow">Editor local</span><h3>' + esc(rascunho.nome || 'Anamnese inicial') + ' · ' + esc(rascunho.versao) + '</h3><p>As alterações abaixo ficam somente neste navegador até você salvar.</p></div><button class="questionnaire-button" type="button" data-questionnaire-action="add-stage">Adicionar etapa</button></div>'
+    + (erros.length ? '<ul class="questionnaire-validation">' + erros.map(function (erro) { return '<li>' + esc(erro) + '</li>'; }).join('') + '</ul>' : '')
+    + rascunho.etapas.map(function (etapa, indiceEtapa) {
+      const perguntas = (etapa.campos || []).map(function (campo, indiceCampo) {
+        const protegido = ['profissional','nomeCompleto','whatsapp'].indexOf(campo.codigo) >= 0;
+        return '<article class="questionnaire-question"><div class="questionnaire-question-copy"><strong>' + esc(campo.rotulo || 'Pergunta sem texto') + '</strong><span>' + esc(campo.tipo) + (campo.obrigatorio ? ' · Obrigatória' : ' · Opcional') + (protegido ? ' · Campo protegido' : '') + '</span></div><div class="questionnaire-question-actions"><button class="questionnaire-icon-button" type="button" data-questionnaire-action="question-up" data-stage="' + indiceEtapa + '" data-question="' + indiceCampo + '" aria-label="Mover pergunta para cima">↑</button><button class="questionnaire-icon-button" type="button" data-questionnaire-action="question-down" data-stage="' + indiceEtapa + '" data-question="' + indiceCampo + '" aria-label="Mover pergunta para baixo">↓</button><button class="questionnaire-icon-button" type="button" data-questionnaire-action="move-question" data-stage="' + indiceEtapa + '" data-question="' + indiceCampo + '">Mover</button><button class="questionnaire-icon-button" type="button" data-questionnaire-action="edit-question" data-stage="' + indiceEtapa + '" data-question="' + indiceCampo + '">Editar</button>' + (protegido ? '' : '<button class="questionnaire-icon-button" type="button" data-questionnaire-action="delete-question" data-stage="' + indiceEtapa + '" data-question="' + indiceCampo + '">Excluir</button>') + '</div></article>';
+      }).join('') || '<div class="questionnaire-empty">Sem perguntas nesta etapa.</div>';
+      return '<section class="questionnaire-stage"><div class="questionnaire-stage-header"><strong>' + (indiceEtapa + 1) + '. ' + esc(etapa.titulo || 'Etapa sem nome') + '</strong><div class="questionnaire-stage-actions"><button class="questionnaire-icon-button" type="button" data-questionnaire-action="stage-up" data-stage="' + indiceEtapa + '">↑</button><button class="questionnaire-icon-button" type="button" data-questionnaire-action="stage-down" data-stage="' + indiceEtapa + '">↓</button><button class="questionnaire-icon-button" type="button" data-questionnaire-action="edit-stage" data-stage="' + indiceEtapa + '">Renomear</button><button class="questionnaire-icon-button" type="button" data-questionnaire-action="delete-stage" data-stage="' + indiceEtapa + '">Excluir etapa</button><button class="questionnaire-icon-button" type="button" data-questionnaire-action="add-question" data-stage="' + indiceEtapa + '">Adicionar pergunta</button></div></div>' + perguntas + '</section>';
+    }).join('') + '</section>';
+}
+
+function atualizarRascunhoQuestionario(mutacao) { if (!state.questionarioGestor || !state.questionarioGestor.rascunho) return; mutacao(state.questionarioGestor.rascunho); salvarRascunhoLocalQuestionario(); renderizarQuestionarioGestor(); }
+function abrirModalQuestionario(titulo, conteudo) { const modal=el('questionnaireModal'), tituloEl=el('questionnaireModalTitle'), area=el('questionnaireModalContent'); if(!modal||!area)return; tituloEl.textContent=titulo; area.innerHTML=conteudo; modal.hidden=false; }
+function fecharModalQuestionario() { const modal=el('questionnaireModal'); if(modal)modal.hidden=true; }
+function criarNovaVersaoQuestionario() { const dados=state.questionarioGestor; if(!dados||dados.rascunho||!dados.ativa)return; const r=clonarQuestionario(dados.ativa); r.versao=proximaVersaoLocalQuestionario(); r.status='Rascunho'; r.revisao=0; dados.rascunho=r; salvarRascunhoLocalQuestionario(); renderizarQuestionarioGestor(); }
+function moverPerguntaParaEtapa(indiceEtapa, indicePergunta, destino) { atualizarRascunhoQuestionario(function(r){ const origem=r.etapas[indiceEtapa]; const pergunta=origem.campos.splice(indicePergunta,1)[0]; r.etapas[destino].campos.push(pergunta); }); }
+function trocarPosicao(lista, indice, direcao) { const destino=indice+direcao; if(destino<0||destino>=lista.length)return; const item=lista[indice]; lista[indice]=lista[destino]; lista[destino]=item; }
+
+function carregarQuestionarioGestor(forcar) {
+  if (state.questionarioCarregando || (!forcar && state.questionarioGestor)) return;
+  state.questionarioCarregando=true; renderizarQuestionarioGestor();
+  chamarServidor('getQuestionarioGestorAnalytics').then(function(dados){
+    const local=rascunhoLocalQuestionario();
+    state.questionarioGestor=dados;
+    if (!dados.rascunho && local && local.versao === dados.proximaVersao) state.questionarioGestor.rascunho=local;
+  }).catch(function(erro){mostrarAviso('Não foi possível carregar o questionário: '+(erro.message||erro),'erro');}).finally(function(){state.questionarioCarregando=false;renderizarQuestionarioGestor();});
+}
+
+function executarAcaoQuestionario(botao,texto,funcao) { if(state.questionarioAcaoPendente)return; state.questionarioAcaoPendente=true; const original=botao.textContent; botao.disabled=true; botao.setAttribute('aria-busy','true'); botao.textContent=texto; funcao().catch(function(erro){mostrarAviso((erro&&erro.message)||'Não foi possível concluir a alteração. O rascunho local foi mantido.','erro');}).finally(function(){state.questionarioAcaoPendente=false;botao.disabled=false;botao.removeAttribute('aria-busy');botao.textContent=original;renderizarQuestionarioGestor();}); }
+function salvarQuestionarioGestor(botao,publicar) { const r=state.questionarioGestor&&state.questionarioGestor.rascunho; if(!r)return; const erros=validarRascunhoQuestionarioLocal(r); if(publicar&&erros.length){mostrarAviso('Corrija os erros do rascunho antes de publicar.','erro');return;} executarAcaoQuestionario(botao,publicar?'Publicando…':'Salvando…',function(){return chamarServidor(publicar?'publicarQuestionarioGestorAnalytics':'salvarRascunhoQuestionarioGestorAnalytics',r,r.revisao).then(function(dados){state.questionarioGestor=dados;window.localStorage.removeItem(QUESTIONNAIRE_DRAFT_KEY);mostrarAviso(publicar?'Nova versão publicada.':'Rascunho salvo.','ok');});}); }
+
+function abrirEditorEtapa(indice) {
+  const etapa = indice == null ? { titulo:'' } : state.questionarioGestor.rascunho.etapas[indice];
+  abrirModalQuestionario(indice == null ? 'Adicionar etapa' : 'Renomear etapa', '<form id="questionnaireStageForm"><div class="questionnaire-field"><label for="questionnaireStageName">Nome da etapa</label><input id="questionnaireStageName" name="titulo" value="' + esc(etapa.titulo || '') + '" required autocomplete="off"></div><div class="questionnaire-modal-actions"><button class="questionnaire-button" type="button" data-close-questionnaire>Cancelar</button><button class="questionnaire-button primary" type="submit">Confirmar</button></div></form>');
+  const form=el('questionnaireStageForm'); if(form)form.addEventListener('submit',function(evento){evento.preventDefault();const titulo=form.elements.titulo.value.trim();if(!titulo)return;atualizarRascunhoQuestionario(function(r){if(indice==null)r.etapas.push({id:gerarIdQuestionario('etapa'),titulo:titulo,ordem:r.etapas.length+1,campos:[]});else r.etapas[indice].titulo=titulo;});fecharModalQuestionario();});
+}
+function abrirEditorPergunta(indiceEtapa, indicePergunta) {
+  const existente=indicePergunta==null?null:state.questionarioGestor.rascunho.etapas[indiceEtapa].campos[indicePergunta];
+  const campo=existente||{codigo:gerarIdQuestionario('pergunta'),cabecalho:'Pergunta '+Date.now(),rotulo:'',tipo:'texto',obrigatorio:true,opcoes:[]};
+  const protegido=['profissional','nomeCompleto','whatsapp'].indexOf(campo.codigo)>=0;
+  const tipos=['texto','texto_longo','numero','data','unica','multipla','select','consentimento','email','tel'];
+  abrirModalQuestionario(existente?'Editar pergunta':'Adicionar pergunta','<form id="questionnaireQuestionForm"><div class="questionnaire-field"><label for="questionnaireQuestionLabel">Pergunta</label><textarea id="questionnaireQuestionLabel" name="rotulo" required>' + esc(campo.rotulo) + '</textarea></div><div class="questionnaire-field"><label for="questionnaireQuestionType">Tipo de resposta</label><select id="questionnaireQuestionType" name="tipo"' + (protegido?' disabled':'') + '>' + tipos.map(function(tipo){return '<option value="'+tipo+'"'+(campo.tipo===tipo?' selected':'')+'>'+esc(tipo)+'</option>';}).join('') + '</select></div><div class="questionnaire-field"><label for="questionnaireQuestionOptions">Opções (uma por linha)</label><textarea id="questionnaireQuestionOptions" name="opcoes">' + esc((campo.opcoes||[]).join('\n')) + '</textarea></div><label class="questionnaire-field"><span>Obrigatória</span><input name="obrigatorio" type="checkbox"'+(campo.obrigatorio!==false?' checked':'')+(protegido?' disabled':'')+'></label><div class="questionnaire-modal-actions"><button class="questionnaire-button" type="button" data-close-questionnaire>Cancelar</button><button class="questionnaire-button primary" type="submit">Confirmar</button></div></form>');
+  const form=el('questionnaireQuestionForm'); if(form)form.addEventListener('submit',function(evento){evento.preventDefault();const proximo=Object.assign({},campo,{rotulo:form.elements.rotulo.value.trim(),tipo:protegido?campo.tipo:form.elements.tipo.value,obrigatorio:protegido?true:form.elements.obrigatorio.checked,opcoes:form.elements.opcoes.value.split('\n').map(function(v){return v.trim();}).filter(Boolean)});atualizarRascunhoQuestionario(function(r){if(existente)r.etapas[indiceEtapa].campos[indicePergunta]=proximo;else r.etapas[indiceEtapa].campos.push(proximo);});fecharModalQuestionario();});
+}
+function confirmarExclusaoEtapa(indice) { const etapa=state.questionarioGestor.rascunho.etapas[indice], quantidade=(etapa.campos||[]).length; abrirModalQuestionario('Excluir etapa','<p>Excluir “'+esc(etapa.titulo)+'”? As '+quantidade+' pergunta(s) desta etapa também serão apagadas deste rascunho. Isso não altera anamneses já enviadas.</p><div class="questionnaire-modal-actions"><button class="questionnaire-button" type="button" data-close-questionnaire>Cancelar</button><button class="questionnaire-button danger" type="button" data-confirm-delete-stage="'+indice+'">Excluir etapa e '+quantidade+' pergunta(s)</button></div>'); }
+function tratarAcaoQuestionario(botao) {
+  const acao=botao.dataset.questionnaireAction, etapa=Number(botao.dataset.stage), pergunta=Number(botao.dataset.question);
+  if(acao==='create-version')return criarNovaVersaoQuestionario();
+  if(acao==='save')return salvarQuestionarioGestor(botao,false);
+  if(acao==='publish')return salvarQuestionarioGestor(botao,true);
+  if(acao==='add-stage')return abrirEditorEtapa(null);
+  if(acao==='edit-stage')return abrirEditorEtapa(etapa);
+  if(acao==='delete-stage')return confirmarExclusaoEtapa(etapa);
+  if(acao==='stage-up'||acao==='stage-down')return atualizarRascunhoQuestionario(function(r){trocarPosicao(r.etapas,etapa,acao==='stage-up'?-1:1);});
+  if(acao==='add-question')return abrirEditorPergunta(etapa,null);
+  if(acao==='edit-question')return abrirEditorPergunta(etapa,pergunta);
+  if(acao==='question-up'||acao==='question-down')return atualizarRascunhoQuestionario(function(r){trocarPosicao(r.etapas[etapa].campos,pergunta,acao==='question-up'?-1:1);});
+  if(acao==='delete-question')return atualizarRascunhoQuestionario(function(r){r.etapas[etapa].campos.splice(pergunta,1);});
+  if(acao==='move-question') { const r=state.questionarioGestor.rascunho; const opcoes=r.etapas.map(function(item,indice){return '<button class="questionnaire-button" type="button" data-move-question-to="'+indice+'" data-stage="'+etapa+'" data-question="'+pergunta+'">'+esc(item.titulo)+'</button>';}).join(''); return abrirModalQuestionario('Mover pergunta','<p>Escolha a etapa de destino.</p><div class="questionnaire-modal-actions">'+opcoes+'</div>'); }
+}
+
+function renderizarTudo() { fecharAjuda(false); fecharAnamnese(false); renderizarAcompanhamento(); renderizarProdutividade(); renderizarComparativos(); }
+function preencherFiltros() {
+  const select = el('professionalFilter');
+  if (!select || !state.payload) return;
+  select.innerHTML = '<option value="todos">Equipe completa</option>' + state.payload.filtros.profissionais.map(function (p) {
+    return '<option value="' + esc(p) + '">' + esc(p) + '</option>';
+  }).join('');
+  select.value = state.profissional;
+  atualizarMenuTematizado(select);
+}
+function mostrarAviso(texto,tipo) { const box=el('notice'); if(!box)return; box.hidden=!texto; box.className='notice'+(tipo==='erro'?' is-error':''); box.textContent=texto||''; }
+function mostrarErroBase(resposta) { const box=el('dataError'); if(!box)return; box.hidden=false; const msg=el('dataErrorMessage'); if(msg)msg.textContent=(resposta.error&&resposta.error.message)||'Não foi possível ler a estrutura da planilha.'; const detalhes=(resposta.error&&resposta.error.details)||resposta.erros||[]; const lista=el('dataErrorSteps'); if(lista)lista.innerHTML=detalhes.map(function(e){return '<li>'+esc(e.mensagem||e.codigo)+'</li>';}).join('')+'<li>Depois, execute configurarDashboardAnalytics() neste segundo projeto.</li>'; }
+function finalizarBoot() { const boot=el('bootScreen'),app=el('appShell'); if(app)app.hidden=false; if(boot)boot.hidden=true; }
+function aplicarPayload(resposta) { if(!resposta||resposta.ok===false){mostrarErroBase(resposta||{});finalizarBoot();return;} state.payload=resposta; const atualizado=el('updatedAt'); if(atualizado)atualizado.textContent='Atualizado em '+new Date(resposta.meta.atualizadoEm).toLocaleString('pt-BR'); preencherFiltros(); renderizarTudo(); finalizarBoot(); }
+
+function carregarDados(forcar) {
+  if(state.carregando)return; state.carregando=true; const botao=el('refreshButton'); if(botao)botao.disabled=true; mostrarAviso(forcar?'Atualizando planilha e indicadores…':'','');
+  chamarServidor(forcar?'atualizarDashboardAnalytics':'getDashboardAnalytics').then(function(resposta){aplicarPayload(resposta);if(forcar)mostrarAviso('Dados e snapshot de hoje atualizados.','ok');}).catch(function(erro){mostrarAviso('Não foi possível carregar: '+(erro.message||erro),'erro');finalizarBoot();}).finally(function(){state.carregando=false;if(botao)botao.disabled=false;});
+}
+
+function trocarAba(aba) { fecharAjuda(false); fecharAnamnese(false); state.abaAtiva=aba; document.querySelectorAll('[data-view]').forEach(function(v){const ativa=v.dataset.view===aba;v.hidden=!ativa;v.classList.toggle('is-active',ativa);}); document.querySelectorAll('[data-tab]').forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.tab===aba));}); if(aba==='questionario')carregarQuestionarioGestor(false); window.scrollTo({top:0,behavior:'auto'}); }
+function iniciarApp() {
+  inicializarMenusTematizados();
+  document.querySelectorAll('[data-help]').forEach(function(botao){botao.setAttribute('aria-controls','helpPopover');});
+  document.querySelectorAll('[data-tab]').forEach(function(b){b.addEventListener('click',function(){trocarAba(b.dataset.tab);});});
+  const eventos=[['refreshButton','click',function(){carregarDados(true);}],['searchInput','input',function(e){state.busca=e.target.value;renderizarAcompanhamento();}],['situationFilter','change',function(e){state.situacao=e.target.value;renderizarAcompanhamento();}],['deadlineFilter','change',function(e){state.prazo=e.target.value;renderizarAcompanhamento();}],['professionalFilter','change',function(e){state.profissional=e.target.value;renderizarTudo();}],['periodFilter','change',function(e){state.periodo=e.target.value;renderizarTudo();}],['rankingSort','change',function(e){state.ranking=e.target.value;renderizarProdutividade();}]];
+  eventos.forEach(function(item){const node=el(item[0]);if(node)node.addEventListener(item[1],item[2]);}); carregarDados(false);
+  document.addEventListener('click',function(evento){
+    if (!(evento.target.closest && evento.target.closest('.themed-select'))) fecharMenusTematizados(false);
+    if(evento.target.closest&&evento.target.closest('[data-close-anamnesis]')){fecharAnamnese(true);return;}
+    if(evento.target.closest&&evento.target.closest('[data-delete-demand]')){excluirDemandaAtual();return;}
+    if(evento.target.closest&&evento.target.closest('#anamnesisExpandToggle')){alternarBlocosAnamnese();return;}
+    if(evento.target.closest&&evento.target.closest('[data-retry-anamnesis]')){tentarNovamenteAnamnese();return;}
+    if(evento.target.closest&&evento.target.closest('[data-close-questionnaire]')){fecharModalQuestionario();return;}
+    const confirmarEtapa=evento.target.closest?evento.target.closest('[data-confirm-delete-stage]'):null;
+    if(confirmarEtapa){atualizarRascunhoQuestionario(function(r){r.etapas.splice(Number(confirmarEtapa.dataset.confirmDeleteStage),1);});fecharModalQuestionario();return;}
+    const mover=evento.target.closest?evento.target.closest('[data-move-question-to]'):null;
+    if(mover){moverPerguntaParaEtapa(Number(mover.dataset.stage),Number(mover.dataset.question),Number(mover.dataset.moveQuestionTo));fecharModalQuestionario();return;}
+    const acaoQuestionario=evento.target.closest?evento.target.closest('[data-questionnaire-action]'):null;
+    if(acaoQuestionario){tratarAcaoQuestionario(acaoQuestionario);return;}
+    const botao=evento.target.closest?evento.target.closest('[data-help]'):null;
+    if(botao){abrirAjuda(botao.dataset.help,botao);return;}
+    if(evento.target.closest&&evento.target.closest('#helpClose')){fecharAjuda(true);return;}
+    if(evento.target.closest&&evento.target.closest('[data-whatsapp-link]'))return;
+    const card=evento.target.closest?evento.target.closest('[data-open-anamnesis]'):null;
+    if(card){abrirAnamnese(card.dataset.openAnamnesis,card);return;}
+    const popover=el('helpPopover');
+    if(popover&&!popover.hidden&&!popover.contains(evento.target))fecharAjuda(false);
+  });
+  document.addEventListener('click',function(evento){if(evento.target.closest&&evento.target.closest('.anamnesis-title'))setTimeout(atualizarControleExpansaoAnamnese,0);});
+  document.addEventListener('keydown',function(evento){
+    const modal=el('anamnesisModal');
+    if(evento.key==='Escape'&&Array.from(menusTematizados.values()).some(function(registro){return registro.aberto;})){fecharMenusTematizados(true);return;}
+    if(evento.key==='Escape'&&modal&&!modal.hidden){fecharAnamnese(true);return;}
+    if(evento.key==='Escape'){fecharAjuda(true);return;}
+    if((evento.key==='Enter'||evento.key===' ')&&evento.target.matches&&evento.target.matches('[data-open-anamnesis]')){evento.preventDefault();abrirAnamnese(evento.target.dataset.openAnamnesis,evento.target);}
+  });
+  if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('resize',function(){if(ajudaAtiva)posicionarAjuda(ajudaAtiva);});
+}
+if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', iniciarApp);
+if (typeof window !== 'undefined') window.AnalyticsTest={filtrarPorSituacao:filtrarPorSituacao,calcularDominio:calcularDominio};
+</script>
