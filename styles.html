@@ -289,6 +289,8 @@
     color: #080b02;
   }
 
+  .tab-label-mobile { display: none; }
+
   .demand-view {
     max-width: 760px;
     margin: 0 auto;
@@ -1156,7 +1158,10 @@
   @media (max-width: 600px) {
 
     .app-tabs { margin-bottom: 15px; }
-    .app-tab { min-height: 48px; }
+    .app-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
+    .app-tabs{padding-bottom:0}
+    .app-tab { min-width:0; min-height:48px; padding:0 8px; font-size:13px; }
+    .tab-label-full{display:none}.tab-label-mobile{display:inline}
     .demand-wizard { margin-right: -2px; margin-left: -2px; padding: 18px 15px max(20px, env(safe-area-inset-bottom)); }
     .wizard-actions { grid-template-columns: 1fr; }
     .wizard-actions .save-button { grid-column: auto; }

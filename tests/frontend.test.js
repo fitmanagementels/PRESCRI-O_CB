@@ -109,6 +109,8 @@ assert(
 );
 
 assert(styles.includes('--lime-strong'), 'O tema deve manter o token verde-limão.');
+assert(index.includes('class="tab-label-mobile"'), 'A navegação deve possuir rótulos curtos específicos para mobile.');
+assert(styles.includes('.app-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}'), 'No mobile, as duas abas devem formar uma grade fixa sem rolagem horizontal.');
 assert(styles.includes('--question-text: #a9bd49'), 'As perguntas devem usar o verde de leitura equilibrado.');
 assert(!scriptsHtml.includes("respostas.dorAtual === 'Sim'"), 'O wizard não deve manter condicionais de dor.');
 assert(!scriptsHtml.includes("respostas.assimetria === 'Sim'"), 'O wizard não deve manter condicionais de assimetria.');

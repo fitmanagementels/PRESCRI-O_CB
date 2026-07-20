@@ -50,6 +50,9 @@ function probeHtml(width) {
         const rect = (selector) => query(selector).getBoundingClientRect();
         const cards = Array.from(doc.querySelectorAll('.metric-card'));
         const primeiraLinha = cards.filter((card) => Math.abs(card.offsetTop - cards[0].offsetTop) < 2).length;
+        const abas = Array.from(doc.querySelectorAll('.app-tab'));
+        const navegacao = query('.app-tabs');
+        const abasNaPrimeiraLinha = abas.filter((aba) => Math.abs(aba.offsetTop - abas[0].offsetTop) < 2).length;
         result.textContent = JSON.stringify({
           width: ${width},
           horizontalOverflow: root.scrollWidth > root.clientWidth,
@@ -72,6 +75,10 @@ function probeHtml(width) {
           modalCloseHeight: parseFloat(style('.modal-close').height),
           modalExpandHeight: parseFloat(style('.modal-expand-toggle').height),
           modalTouchAction: style('.modal-content').touchAction,
+          tabsDisplay: style('.app-tabs').display,
+          tabsOverflow: navegacao.scrollWidth > navegacao.clientWidth,
+          tabsNaPrimeiraLinha: abasNaPrimeiraLinha,
+          tabHeight: rect('.app-tab').height,
         });
       }, 50);
     });
@@ -132,6 +139,10 @@ async function executar() {
     assert(medida.modalExpandHeight >= 48, `Expandir deve ter 48px em ${width}px.`);
     assert(medida.anamnesisTitleHeight >= 48, `Seções da anamnese devem ter 48px em ${width}px.`);
     assert(medida.answerValueFont >= 15, `Respostas devem ter pelo menos 15px em ${width}px.`);
+    assert.strictEqual(medida.tabsDisplay, 'grid', `Navegação deve usar duas colunas fixas em ${width}px.`);
+    assert.strictEqual(medida.tabsOverflow, false, `Navegação não deve ter rolagem horizontal em ${width}px.`);
+    assert.strictEqual(medida.tabsNaPrimeiraLinha, 2, `As duas abas devem ficar lado a lado em ${width}px.`);
+    assert(medida.tabHeight >= 48, `Abas devem manter 48px de toque em ${width}px.`);
     assert(
       medida.modalTouchAction.includes('pinch-zoom'),
       `Modal deve permitir zoom por pinça em ${width}px.`
@@ -141,6 +152,7 @@ async function executar() {
   const desktop = await medir(880);
   assert.strictEqual(desktop.horizontalOverflow, false, 'Desktop não deve possuir overflow horizontal.');
   assert.strictEqual(desktop.metricColumns, 4, 'Desktop deve manter quatro métricas na mesma linha.');
+  assert.strictEqual(desktop.tabsDisplay, 'flex', 'Desktop deve manter a navegação horizontal original.');
 
   console.log('Responsivo: layout computado aprovado em 320, 360, 390, 412, 430 e 880px.');
 }
