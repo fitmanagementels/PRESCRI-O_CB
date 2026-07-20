@@ -521,6 +521,32 @@ function filtrarAcompanhamento() {
 
 function kpi(valor, rotulo, tone, ajuda) { return '<article class="kpi" style="--tone:' + tone + '">' + botaoAjuda(ajuda) + '<strong>' + esc(valor) + '</strong><span>' + esc(rotulo) + '</span></article>'; }
 const ICONE_WHATSAPP_CARTAO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 2.6 18L1.3 22.7 6.1 21.4A11.8 11.8 0 1 0 20.5 3.5Zm-8.6 17.1a9.7 9.7 0 0 1-4.9-1.3l-.3-.2-2.8.7.8-2.7-.2-.3A9.7 9.7 0 1 1 12 20.6Zm5.3-7.2c-.3-.1-1.8-.9-2.1-1-.3-.1-.5-.1-.7.1l-.9 1.1c-.2.2-.3.3-.6.1a7.9 7.9 0 0 1-2.3-1.4 8.6 8.6 0 0 1-1.6-2c-.2-.3 0-.5.1-.6l.5-.6.3-.5c.1-.2 0-.4 0-.5L9 5.8c-.2-.5-.5-.4-.7-.4h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1 2.9 1.1 3.1c.1.2 2 3 4.8 4.2.7.3 1.2.5 1.7.6.7.2 1.3.2 1.8.1.5-.1 1.8-.7 2-1.4.3-.6.3-1.2.2-1.3-.1-.1-.3-.2-.6-.3Z"/></svg>';
+function telefoneDeLinkWhatsapp(url) {
+  const resultado = String(url || '').match(/^https:\/\/wa\.me\/(\d{12,15})$/);
+  return resultado ? resultado[1] : '';
+}
+function linkAppWhatsapp(url) {
+  const telefone = telefoneDeLinkWhatsapp(url);
+  return telefone ? 'whatsapp://send?phone=' + telefone : '';
+}
+function abrirWhatsappPorDispositivo(evento, url) {
+  const telefone = telefoneDeLinkWhatsapp(url), linkApp = linkAppWhatsapp(url);
+  if (!telefone || !linkApp) return;
+  evento.preventDefault();
+  let perdeuFoco = false;
+  const marcarSaida = function () { perdeuFoco = true; };
+  const limparObservadores = function () {
+    if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('blur', marcarSaida);
+    if (typeof document !== 'undefined' && document.removeEventListener) document.removeEventListener('visibilitychange', marcarSaida);
+  };
+  if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('blur', marcarSaida, { once:true });
+  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', marcarSaida, { once:true });
+  window.location.href = linkApp;
+  setTimeout(function () {
+    limparObservadores();
+    if (!perdeuFoco) window.open('https://wa.me/' + telefone, '_blank', 'noopener,noreferrer');
+  }, 1300);
+}
 function acaoWhatsappCartao(item) {
   const titulo = 'Abrir conversa no WhatsApp com ' + esc(item.aluno || 'aluno');
   if (!item.whatsappLink) return '<button class="card-icon-action whatsapp" type="button" disabled aria-label="WhatsApp indisponível" title="WhatsApp não cadastrado">' + ICONE_WHATSAPP_CARTAO + '</button>';
@@ -856,6 +882,8 @@ function iniciarApp() {
   document.addEventListener('click',function(evento){
     if (!(evento.target.closest && evento.target.closest('.themed-select'))) fecharMenusTematizados(false);
     if(evento.target.closest&&evento.target.closest('[data-close-anamnesis]')){fecharAnamnese(true);return;}
+    const whatsapp=evento.target.closest?evento.target.closest('[data-whatsapp-link]'):null;
+    if(whatsapp){abrirWhatsappPorDispositivo(evento,whatsapp.href);return;}
     const apagar=evento.target.closest?evento.target.closest('[data-card-delete-demand]'):null;
     if(apagar){excluirDemandaAtual(apagar.dataset.cardDeleteDemand,apagar);return;}
     if(evento.target.closest&&evento.target.closest('#anamnesisExpandToggle')){alternarBlocosAnamnese();return;}
@@ -870,7 +898,6 @@ function iniciarApp() {
     const botao=evento.target.closest?evento.target.closest('[data-help]'):null;
     if(botao){abrirAjuda(botao.dataset.help,botao);return;}
     if(evento.target.closest&&evento.target.closest('#helpClose')){fecharAjuda(true);return;}
-    if(evento.target.closest&&evento.target.closest('[data-whatsapp-link]'))return;
     const card=evento.target.closest?evento.target.closest('[data-open-anamnesis]'):null;
     if(card){abrirAnamnese(card.dataset.openAnamnesis,card);return;}
     const popover=el('helpPopover');

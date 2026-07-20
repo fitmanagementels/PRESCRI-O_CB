@@ -80,6 +80,12 @@ assert.strictEqual(typeof sandbox.formatarValorAnamnese, 'function');
 assert.strictEqual(typeof sandbox.urlWhatsappGestor, 'function');
 assert.strictEqual(sandbox.urlWhatsappGestor('(85) 99999-0000'), 'https://wa.me/5585999990000');
 assert.strictEqual(sandbox.urlWhatsappGestor(''), '');
+assert.strictEqual(typeof sandbox.telefoneDeLinkWhatsapp, 'function');
+assert.strictEqual(sandbox.telefoneDeLinkWhatsapp('https://wa.me/5585999990000'), '5585999990000');
+assert.strictEqual(sandbox.telefoneDeLinkWhatsapp('https://wa.me/numero-invalido'), '');
+assert.strictEqual(typeof sandbox.linkAppWhatsapp, 'function');
+assert.strictEqual(sandbox.linkAppWhatsapp('https://wa.me/5585999990000'), 'whatsapp://send?phone=5585999990000');
+assert.strictEqual(sandbox.linkAppWhatsapp(''), '');
 const gruposAnamnese = sandbox.agruparAnamnese([
   { campo: 'Consentimento', valor: true, tipo: 'booleano' },
   { campo: 'Objetivo principal', valor: 'Saúde', tipo: 'texto' },
