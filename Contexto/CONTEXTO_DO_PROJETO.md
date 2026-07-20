@@ -120,7 +120,7 @@ Se a rotina encontrar estrutura incompatível ou uma aba de legado já existente
 - Diretório: `dashboard-analytics/`.
 - Lê `Respostas` e `Monitoramento`; escreve snapshots agregados em `Analytics_Historico` e logs mínimos em `Analytics_Exclusoes`.
 - Não deve formatar, limpar, reordenar ou reescrever `Respostas`/`Monitoramento`; a única exceção é a exclusão definitiva de uma demanda, acionada no modal, confirmada com `EXCLUIR` e feita em ambas as abas pelo `ID da demanda`.
-- O modal da anamnese exibe um ícone de WhatsApp somente se o número cadastrado for válido; ele abre `wa.me` e não fica disponível no PWA dos prescritores.
+- Cada cartão de demanda do dashboard exibe WhatsApp, exclusão e **Ver anamnese**; o cartão não abre a ficha por clique livre. O modal permanece somente para leitura da anamnese.
 - Usa cache próprio por até 10 minutos, SLA configurado de 2 dias e pode instalar gatilho diário entre 23h e 0h no fuso de Fortaleza.
 - O dashboard é operacional/gerencial: volume, backlog, SLA, tempo, distribuição por profissional e ficha de anamnese sob demanda. Não registrar respostas clínicas completas no histórico ou cache analítico.
 
@@ -134,7 +134,7 @@ Se a rotina encontrar estrutura incompatível ou uma aba de legado já existente
 | 2026-07-20 | Wizard de anamnese criado com rascunho de seis horas | Prescritores podem interromper e retomar o preenchimento sem linha parcial na planilha. |
 | 2026-07-20 | Manifesto e splash corrigidos | Acesso/execução documentados; erro que travava a abertura em 100% foi removido. |
 | 2026-07-20 | Fluxo reorganizado e dias por semana convertido em seletor temático | Agrupamento mais lógico e interface consistente no mobile. |
-| 2026-07-20 | Dashboard ganhou WhatsApp e exclusão confirmada de demanda | A exclusão remove `Respostas` e `Monitoramento` pelo ID e registra auditoria sem dados clínicos. |
+| 2026-07-20 | Dashboard ganhou WhatsApp e exclusão confirmada de demanda | As ações ficam no cartão; a exclusão remove `Respostas` e `Monitoramento` pelo ID e registra auditoria. |
 
 ## Memória de decisões e justificativas
 

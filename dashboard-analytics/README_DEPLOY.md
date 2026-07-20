@@ -96,8 +96,8 @@ Essa URL é diferente da URL do app operacional. Em alterações futuras, use **
 - O gatilho diário mantém a evolução de backlog e produtividade registrada mesmo quando ninguém abre o app.
 - A visão padrão de Acompanhamento é **A fazer**, combinação de demandas não transferidas e aguardando prescrição.
 - Na aba **Acompanhamento**, clique em qualquer cartão ou em **Ver anamnese** para abrir a ficha completa do aluno em um pop-up.
-- No pop-up, o ícone verde abre a conversa de WhatsApp quando a anamnese tiver um número válido. O número não aparece no dashboard e o comando existe apenas neste projeto gerencial.
-- O ícone vermelho exclui a demanda de `Respostas` e a respectiva linha de `Monitoramento`. É irreversível no fluxo do app: o gestor precisa digitar `EXCLUIR` e pode registrar um motivo. O ID, a data/hora, o motivo e a origem ficam em `Analytics_Exclusoes`.
+- Cada cartão de demanda apresenta as ações de WhatsApp, exclusão e **Ver anamnese**. O cartão em si é apenas informativo e não abre a ficha ao ser clicado.
+- O ícone verde abre a conversa de WhatsApp quando a demanda tiver um número válido. O ícone vermelho exclui a demanda de `Respostas` e a respectiva linha de `Monitoramento`. A exclusão exige digitar `EXCLUIR`; o ID, a data/hora, o motivo e a origem ficam em `Analytics_Exclusoes`.
 - A ficha é buscada por `ID da demanda` somente no primeiro acesso e reaproveitada em memória enquanto a página permanecer aberta.
 - Essa consulta é somente de leitura: abrir a ficha não altera `Respostas`, `Monitoramento` nem o histórico analítico.
 - A exclusão não altera snapshots já existentes em `Analytics_Historico`; eles são registros agregados do momento em que foram criados.

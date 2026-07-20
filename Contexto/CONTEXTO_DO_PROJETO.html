@@ -81,14 +81,14 @@
         <tr><td>Nova base e legado separado</td><td>Evitar acoplamento com formato imposto pelo Tally.</td><td>Base única v1/v2 e backup legível.</td></tr>
         <tr><td>Versionar questionários</td><td>Proteger dados quando perguntas mudarem.</td><td>Campos antigos permanecem; significado novo cria versão nova.</td></tr>
         <tr><td>Rascunho local por seis horas</td><td>Formulário pode ser pausado, fechado ou ficar sem bateria.</td><td>Não usar planilha/cache do servidor para incompletos.</td></tr>
-        <tr><td>Projetos Apps Script separados</td><td>Isolar deploy, cache, gatilhos e riscos do dashboard.</td><td>Dashboard não altera fontes operacionais.</td></tr>
+        <tr><td>Projetos Apps Script separados</td><td>Isolar deploy, cache, gatilhos e riscos do dashboard.</td><td>Exclusão confirmada no dashboard é a única escrita autorizada nas fontes operacionais.</td></tr>
       </tbody></table>
     </details>
 
     <details open>
       <summary>Dashboard gerencial: WhatsApp e exclusão</summary>
-      <p>Somente o projeto <code>dashboard-analytics/</code> exibe, no modal da anamnese, o ícone de WhatsApp. O número cadastrado é transformado em um link <code>wa.me</code>; se houver apenas DDD e número, o DDI brasileiro <code>55</code> é incluído.</p>
-      <p>O ícone vermelho exclui definitivamente a demanda de <code>Respostas</code> e <code>Monitoramento</code> pelo <code>ID da demanda</code>. Ele exige digitar <code>EXCLUIR</code>; o sistema registra o ID, data/hora, motivo e origem em <code>Analytics_Exclusoes</code>, sem salvar dados clínicos ou telefone. Snapshots já existentes em <code>Analytics_Historico</code> não são modificados.</p>
+      <p>Somente o projeto <code>dashboard-analytics/</code> exibe, em cada cartão de demanda, o ícone de WhatsApp, a exclusão e o botão <code>Ver anamnese</code>. O cartão é informativo e não abre a ficha quando clicado. O número cadastrado é transformado em um link <code>wa.me</code>; se houver apenas DDD e número, o DDI brasileiro <code>55</code> é incluído.</p>
+      <p>O ícone vermelho exclui definitivamente a demanda de <code>Respostas</code> e <code>Monitoramento</code> pelo <code>ID da demanda</code>. Ele exige digitar <code>EXCLUIR</code>; o sistema registra o ID, data/hora, motivo e origem em <code>Analytics_Exclusoes</code>. Snapshots já existentes em <code>Analytics_Historico</code> não são modificados.</p>
     </details>
 
     <details>

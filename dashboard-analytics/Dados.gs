@@ -6,6 +6,13 @@ function limparTextoAnalytics_(valor) {
   return String(valor == null ? '' : valor).trim();
 }
 
+function linkWhatsappAnalytics_(valor) {
+  let numero = limparTextoAnalytics_(valor).replace(/\D/g, '');
+  if (numero.indexOf('00') === 0) numero = numero.slice(2);
+  if (numero.length === 10 || numero.length === 11) numero = '55' + numero;
+  return numero.length >= 12 && numero.length <= 15 ? 'https://wa.me/' + numero : '';
+}
+
 function normalizarCabecalhoAnalytics_(valor) {
   return limparTextoAnalytics_(valor)
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -71,6 +78,7 @@ function juntarFontesAnalytics_(respostas, monitoramento, hoje) {
       aluno: limparTextoAnalytics_(resposta.aluno),
       profissional: limparTextoAnalytics_(resposta.profissional) || 'Não informado',
       dataEntrada: normalizarDataAnalytics_(resposta.dataEntrada),
+      whatsappLink: linkWhatsappAnalytics_(resposta.whatsapp),
       transferida: normalizarBooleanoAnalytics_(acompanhamento.transferida),
       prescrita: normalizarBooleanoAnalytics_(acompanhamento.prescrita),
       dataConclusao: normalizarDataAnalytics_(acompanhamento.dataConclusao),
@@ -143,6 +151,7 @@ function lerRespostasAnalytics_(aba) {
       dataEntrada: normalizarDataAnalytics_(linha[i.dataEntrada] || exibida[i.dataEntrada]),
       profissional: limparTextoAnalytics_(exibida[i.profissional]),
       aluno: limparTextoAnalytics_(exibida[i.aluno]),
+      whatsapp: i.whatsapp >= 0 ? limparTextoAnalytics_(exibida[i.whatsapp]) : '',
     };
   }).filter(function (item) { return item.submissionId; });
 }

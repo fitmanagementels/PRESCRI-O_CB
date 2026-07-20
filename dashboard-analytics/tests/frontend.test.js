@@ -15,8 +15,8 @@ assert(index.includes('data-view="questionario"'));
 assert(styles.includes('grid-template-columns:repeat(4,1fr)'), 'A navegação com quatro abas deve permanecer em uma única linha.');
 assert(index.includes('id="helpPopover"'));
 assert(index.includes('id="anamnesisModal"'));
-assert(index.includes('id="anamnesisWhatsapp"'));
-assert(index.includes('id="anamnesisDelete"'));
+assert(!index.includes('id="anamnesisWhatsapp"'), 'WhatsApp deve ficar no cartão, não no pop-up.');
+assert(!index.includes('id="anamnesisDelete"'), 'Exclusão deve ficar no cartão, não no pop-up.');
 assert(index.includes('placeholder="Nome ou ID da demanda"'));
 assert(!index.includes('Submission ID'));
 assert.strictEqual((index.match(/id="helpPopover"/g) || []).length, 1, 'Deve existir apenas um pop-up reutilizável.');
@@ -31,6 +31,9 @@ assert(scripts.includes('atualizarDashboardAnalytics'));
 assert(scripts.includes('getAnamneseDashboardAnalytics'));
 assert(scripts.includes('excluirDemandaAnalytics'));
 assert(scripts.includes('data-open-anamnesis'));
+assert(scripts.includes('data-card-delete-demand'));
+assert(!scripts.includes('role="button" tabindex="0" data-open-anamnesis'), 'O cartão não pode abrir a ficha ao ser clicado.');
+assert(!scripts.includes("evento.target.matches&&evento.target.matches('[data-open-anamnesis]')"), 'Somente o botão deve abrir a ficha via teclado.');
 assert(scripts.includes('Ver anamnese'));
 assert(scripts.includes('function inicializarMenusTematizados'));
 assert(scripts.includes('function atualizarMenuTematizado'));
@@ -74,9 +77,9 @@ assert.strictEqual(typeof sandbox.fecharAjuda, 'function');
 assert.strictEqual(typeof sandbox.agruparAnamnese, 'function');
 assert.strictEqual(typeof sandbox.renderizarAnamnese, 'function');
 assert.strictEqual(typeof sandbox.formatarValorAnamnese, 'function');
-assert.strictEqual(typeof sandbox.criarLinkWhatsappDemanda, 'function');
-assert.strictEqual(sandbox.criarLinkWhatsappDemanda('(85) 99999-0000'), 'https://wa.me/5585999990000');
-assert.strictEqual(sandbox.criarLinkWhatsappDemanda(''), '');
+assert.strictEqual(typeof sandbox.urlWhatsappGestor, 'function');
+assert.strictEqual(sandbox.urlWhatsappGestor('(85) 99999-0000'), 'https://wa.me/5585999990000');
+assert.strictEqual(sandbox.urlWhatsappGestor(''), '');
 const gruposAnamnese = sandbox.agruparAnamnese([
   { campo: 'Consentimento', valor: true, tipo: 'booleano' },
   { campo: 'Objetivo principal', valor: 'Saúde', tipo: 'texto' },

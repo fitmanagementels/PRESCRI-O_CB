@@ -25,6 +25,11 @@
   @media (max-width: 760px){.app-shell{padding:18px 14px 108px}.topbar{align-items:flex-start}.brand-logo{width:40px;height:40px}.primary-button{padding:0 13px}.primary-button span+span{display:none}.kpi-grid{grid-template-columns:repeat(2,1fr)}.filter-panel{grid-template-columns:1fr 1fr}.search-field{grid-column:1/-1}.demand-card{grid-template-columns:1fr 1fr}.demand-card>div:first-child{grid-column:1/-1}.view-anamnesis-action{justify-self:end}.metric-groups,.chart-grid{grid-template-columns:1fr}.chart-wide{grid-column:auto}.comparison-summary{grid-template-columns:repeat(2,1fr)}.questionnaire-summary,.questionnaire-question{align-items:flex-start;flex-direction:column}.questionnaire-actions,.questionnaire-stage-actions,.questionnaire-question-actions{width:100%}.questionnaire-button,.questionnaire-icon-button{flex:1}.questionnaire-modal{padding:0}.questionnaire-dialog{width:100%;max-height:100%;overflow:auto;border-radius:0}}
   @media (max-width: 640px){body{font-size:14px}.global-filters{grid-template-columns:1fr 1fr}.brand h1{font-size:21px}.brand p{max-width:210px}.primary-button{font-size:0;width:44px;padding:0;display:grid;place-items:center}.primary-button span{font-size:20px}.section-heading h2{font-size:23px}.kpi{min-height:100px;padding:14px}.kpi strong{font-size:28px}.filter-panel{padding:12px}.demand-card{padding:14px;gap:12px}.metric-row{grid-template-columns:repeat(2,1fr);row-gap:14px}.panel-title{align-items:flex-start}.panel-title label{display:grid}.chart-panel{padding:13px}.help-popover{left:12px!important;right:12px!important;top:auto!important;bottom:88px;width:auto}.anamnesis-modal{padding:0}.anamnesis-dialog{width:100%;height:100%;max-height:none;border-width:0;border-radius:0}.anamnesis-header{padding:max(14px,env(safe-area-inset-top)) 14px 14px}.anamnesis-header h2{font-size:20px}.anamnesis-content{padding:14px 16px max(24px,env(safe-area-inset-bottom))}.answer-list{grid-template-columns:1fr}.answer-wide{grid-column:auto}.app-nav button{min-height:52px;font-size:10px}}
   @media (max-width: 390px){.global-filters{grid-template-columns:1fr}.filter-panel{grid-template-columns:1fr}.search-field{grid-column:auto}.kpi-grid,.comparison-summary{grid-template-columns:1fr 1fr}.demand-card{grid-template-columns:1fr}.demand-card>div:first-child{grid-column:auto}}
+  /* Ações do cartão: o cartão é informativo; cada comando tem controle próprio. */
+  .demand-card{cursor:default}.demand-card:hover{border-color:var(--line);background:var(--surface)}
+  .demand-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px}.view-anamnesis-action{min-height:44px;background:#10170d;padding:0 14px}
+  .card-icon-action{display:grid;place-items:center;width:44px;height:44px;min-height:44px;border:1px solid var(--line);border-radius:50%;background:#090d16;color:var(--text);padding:0;text-decoration:none}.card-icon-action svg{width:21px;height:21px;fill:currentColor}.card-icon-action.whatsapp{border-color:#277a49;color:#75e49a}.card-icon-action.whatsapp:hover{background:#0d2117}.card-icon-action.delete{border-color:#8a3c43;background:#241116;color:#ff9fa5;font-size:20px}.card-icon-action:disabled{opacity:.45;cursor:not-allowed}
+  @media (max-width:760px){.demand-actions{grid-column:1/-1;justify-content:flex-end}.view-anamnesis-action{justify-self:auto}}
 </style>
 
 </head>
@@ -166,11 +171,7 @@
           <p id="anamnesisSubtitle"></p>
         </div>
         <div class="anamnesis-actions">
-          <a class="anamnesis-action whatsapp-action" id="anamnesisWhatsapp" href="#" target="_blank" rel="noopener noreferrer" aria-label="Abrir conversa no WhatsApp" title="Conversar no WhatsApp" hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 2.6 18L1.3 22.7 6.1 21.4A11.8 11.8 0 1 0 20.5 3.5Zm-8.6 17.1a9.7 9.7 0 0 1-4.9-1.3l-.3-.2-2.8.7.8-2.7-.2-.3A9.7 9.7 0 1 1 12 20.6Zm5.3-7.2c-.3-.1-1.8-.9-2.1-1-.3-.1-.5-.1-.7.1l-.9 1.1c-.2.2-.3.3-.6.1a7.9 7.9 0 0 1-2.3-1.4 8.6 8.6 0 0 1-1.6-2c-.2-.3 0-.5.1-.6l.5-.6.3-.5c.1-.2 0-.4 0-.5L9 5.8c-.2-.5-.5-.4-.7-.4h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1 2.9 1.1 3.1c.1.2 2 3 4.8 4.2.7.3 1.2.5 1.7.6.7.2 1.3.2 1.8.1.5-.1 1.8-.7 2-1.4.3-.6.3-1.2.2-1.3-.1-.1-.3-.2-.6-.3Z"/></svg>
-          </a>
           <button id="anamnesisExpandToggle" type="button" aria-label="Expandir todos os blocos" title="Expandir todos os blocos">↕</button>
-          <button class="anamnesis-delete" id="anamnesisDelete" type="button" data-delete-demand aria-label="Excluir demanda" title="Excluir demanda">⌫</button>
           <button id="anamnesisClose" type="button" data-close-anamnesis aria-label="Fechar ficha">×</button>
         </div>
       </header>
@@ -555,12 +556,6 @@ function numero(valor) { return valor == null || !Number.isFinite(Number(valor))
 function percentual(valor) { return valor == null || !Number.isFinite(Number(valor)) ? '—' : numero(valor) + '%'; }
 function dias(valor) { return valor == null || !Number.isFinite(Number(valor)) ? '—' : numero(valor) + (Number(valor) === 1 ? ' dia' : ' dias'); }
 function formatarData(valor) { if (!valor) return '—'; const p = String(valor).slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : valor; }
-function criarLinkWhatsappDemanda(numero) {
-  let digitos = String(numero == null ? '' : numero).replace(/\D/g, '');
-  if (digitos.indexOf('00') === 0) digitos = digitos.slice(2);
-  if (digitos.length === 10 || digitos.length === 11) digitos = '55' + digitos;
-  return digitos.length >= 12 && digitos.length <= 15 ? 'https://wa.me/' + digitos : '';
-}
 function formatarRotuloPeriodo(valor) { if (!valor) return ''; const p = String(valor).split('-'); return p.length === 3 ? p[2] + '/' + p[1] : p.length === 2 ? p[1] + '/' + p[0].slice(2) : valor; }
 function rotuloProfissional(nome) { return nome === '__EQUIPE__' ? 'Equipe completa' : (nome || 'Não informado'); }
 
@@ -771,6 +766,12 @@ function filtrarAcompanhamento() {
 }
 
 function kpi(valor, rotulo, tone, ajuda) { return '<article class="kpi" style="--tone:' + tone + '">' + botaoAjuda(ajuda) + '<strong>' + esc(valor) + '</strong><span>' + esc(rotulo) + '</span></article>'; }
+const ICONE_WHATSAPP_CARTAO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 2.6 18L1.3 22.7 6.1 21.4A11.8 11.8 0 1 0 20.5 3.5Zm-8.6 17.1a9.7 9.7 0 0 1-4.9-1.3l-.3-.2-2.8.7.8-2.7-.2-.3A9.7 9.7 0 1 1 12 20.6Zm5.3-7.2c-.3-.1-1.8-.9-2.1-1-.3-.1-.5-.1-.7.1l-.9 1.1c-.2.2-.3.3-.6.1a7.9 7.9 0 0 1-2.3-1.4 8.6 8.6 0 0 1-1.6-2c-.2-.3 0-.5.1-.6l.5-.6.3-.5c.1-.2 0-.4 0-.5L9 5.8c-.2-.5-.5-.4-.7-.4h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1 2.9 1.1 3.1c.1.2 2 3 4.8 4.2.7.3 1.2.5 1.7.6.7.2 1.3.2 1.8.1.5-.1 1.8-.7 2-1.4.3-.6.3-1.2.2-1.3-.1-.1-.3-.2-.6-.3Z"/></svg>';
+function acaoWhatsappCartao(item) {
+  const titulo = 'Abrir conversa no WhatsApp com ' + esc(item.aluno || 'aluno');
+  if (!item.whatsappLink) return '<button class="card-icon-action whatsapp" type="button" disabled aria-label="WhatsApp indisponível" title="WhatsApp não cadastrado">' + ICONE_WHATSAPP_CARTAO + '</button>';
+  return '<a class="card-icon-action whatsapp" data-whatsapp-link href="' + esc(item.whatsappLink) + '" target="_blank" rel="noopener noreferrer" aria-label="' + titulo + '" title="WhatsApp">' + ICONE_WHATSAPP_CARTAO + '</a>';
+}
 function renderizarAcompanhamento() {
   if (!state.payload) return;
   const todos = state.payload.acompanhamento.filter(function (x) { return dentroPeriodo(x) && (state.profissional === 'todos' || x.profissional === state.profissional); });
@@ -785,9 +786,8 @@ function renderizarAcompanhamento() {
   const badges = { atrasada:['Atrasada','red'], vence_hoje:['Vence hoje','amber'], dentro_prazo:['No prazo','green'], sem_data:['Sem data','blue'] };
   lista.innerHTML = itens.map(function (item) {
     const b = badges[item.sla] || badges.sem_data;
-    const whatsapp = urlWhatsappGestor(item.whatsapp);
-    const contato = whatsapp ? '<a class="whatsapp-action" data-whatsapp-link href="' + esc(whatsapp) + '" target="_blank" rel="noopener" aria-label="Abrir conversa no WhatsApp com ' + esc(item.aluno || 'aluno') + '">WhatsApp ↗</a>' : '';
-    return '<article class="demand-card" role="button" tabindex="0" data-open-anamnesis="' + esc(item.submissionId) + '" aria-label="Abrir anamnese de ' + esc(item.aluno || 'aluno') + '" style="--tone:' + tons[item.status] + '"><div><h4>' + esc(item.aluno || 'Aluno não informado') + '</h4><div class="meta"><span>Entrada ' + formatarData(item.dataEntrada) + '</span><span>ID ' + esc(item.submissionId) + '</span>' + (item.dataConclusao ? '<span>Conclusão ' + formatarData(item.dataConclusao) + '</span>' : '') + '</div></div><div class="owner"><span>Responsável</span><strong>' + esc(item.profissional || 'Não informado') + '</strong></div><div class="stage"><span>' + esc(rotulos[item.status]) + '</span><strong>' + (item.status === 'prescrita' ? dias(item.tempoConclusaoDias) : dias(item.idadeDias)) + '</strong><i class="badge ' + b[1] + '">' + b[0] + '</i></div><div class="demand-actions"><span class="view-anamnesis-action">Ver anamnese <span aria-hidden="true">↗</span></span>' + contato + '</div></article>';
+    const id = esc(item.submissionId);
+    return '<article class="demand-card" style="--tone:' + tons[item.status] + '"><div><h4>' + esc(item.aluno || 'Aluno não informado') + '</h4><div class="meta"><span>Entrada ' + formatarData(item.dataEntrada) + '</span><span>ID ' + id + '</span>' + (item.dataConclusao ? '<span>Conclusão ' + formatarData(item.dataConclusao) + '</span>' : '') + '</div></div><div class="owner"><span>Responsável</span><strong>' + esc(item.profissional || 'Não informado') + '</strong></div><div class="stage"><span>' + esc(rotulos[item.status]) + '</span><strong>' + (item.status === 'prescrita' ? dias(item.tempoConclusaoDias) : dias(item.idadeDias)) + '</strong><i class="badge ' + b[1] + '">' + b[0] + '</i></div><div class="demand-actions">' + acaoWhatsappCartao(item) + '<button class="card-icon-action delete" type="button" data-card-delete-demand="' + id + '" aria-label="Excluir demanda de ' + esc(item.aluno || 'aluno') + '" title="Excluir demanda">⌫</button><button class="view-anamnesis-action" type="button" data-open-anamnesis="' + id + '">Ver anamnese <span aria-hidden="true">↗</span></button></div></article>';
   }).join('');
 }
 
@@ -807,12 +807,6 @@ function renderizarConteudoAnamnese(ficha) {
   const titulo = el('anamnesisTitle'), subtitulo = el('anamnesisSubtitle'), conteudo = el('anamnesisContent');
   if (titulo) titulo.textContent = ficha.aluno || 'Aluno não informado';
   if (subtitulo) subtitulo.textContent = [formatarData(ficha.dataResposta), ficha.profissional || 'Profissional não informado'].join(' · ');
-  const whatsapp = el('anamnesisWhatsapp');
-  if (whatsapp) {
-    const link = criarLinkWhatsappDemanda(ficha.whatsapp);
-    whatsapp.hidden = !link;
-    whatsapp.href = link || '#';
-  }
   if (conteudo) { conteudo.innerHTML = renderizarAnamnese(ficha.respostas); conteudo.scrollTop = 0; }
   atualizarControleExpansaoAnamnese();
 }
@@ -833,7 +827,6 @@ function abrirAnamnese(submissionId, elementoFoco) {
   if (!modal || !conteudo) return;
   if (titulo) titulo.textContent = registro.aluno || 'Aluno não informado';
   if (subtitulo) subtitulo.textContent = [formatarData(registro.dataEntrada), registro.profissional || 'Profissional não informado'].join(' · ');
-  const whatsapp = el('anamnesisWhatsapp'); if (whatsapp) { whatsapp.hidden = true; whatsapp.href = '#'; }
   modal.hidden = false;
   document.body.classList.add('modal-open');
   if (state.anamneses[submissionId]) renderizarConteudoAnamnese(state.anamneses[submissionId]);
@@ -879,8 +872,8 @@ function tentarNovamenteAnamnese() {
   carregarAnamnese(id, true).then(renderizarConteudoAnamnese).catch(renderizarErroAnamnese);
 }
 
-function excluirDemandaAtual() {
-  const submissionId = state.anamneseAtual;
+function excluirDemandaAtual(submissionId, gatilho) {
+  submissionId = submissionId || state.anamneseAtual;
   if (!submissionId || typeof window === 'undefined' || typeof window.prompt !== 'function') return;
   const confirmacao = window.prompt('Esta ação apaga definitivamente a demanda de Respostas e Monitoramento. Digite EXCLUIR para confirmar.');
   if (confirmacao === null) return;
@@ -890,11 +883,11 @@ function excluirDemandaAtual() {
   }
   const motivo = window.prompt('Motivo da exclusão (opcional):');
   if (motivo === null) return;
-  const botao = el('anamnesisDelete');
+  const botao = gatilho || null;
   if (botao) botao.disabled = true;
   chamarServidor('excluirDemandaAnalytics', { submissionId: submissionId, confirmacao: confirmacao, motivo: motivo }).then(function () {
     delete state.anamneses[submissionId];
-    fecharAnamnese(true);
+    if (state.anamneseAtual === submissionId) fecharAnamnese(true);
     mostrarAviso('Demanda excluída de Respostas e Monitoramento.', 'ok');
     return carregarDados(true);
   }).catch(function (erro) {
@@ -1109,7 +1102,8 @@ function iniciarApp() {
   document.addEventListener('click',function(evento){
     if (!(evento.target.closest && evento.target.closest('.themed-select'))) fecharMenusTematizados(false);
     if(evento.target.closest&&evento.target.closest('[data-close-anamnesis]')){fecharAnamnese(true);return;}
-    if(evento.target.closest&&evento.target.closest('[data-delete-demand]')){excluirDemandaAtual();return;}
+    const apagar=evento.target.closest?evento.target.closest('[data-card-delete-demand]'):null;
+    if(apagar){excluirDemandaAtual(apagar.dataset.cardDeleteDemand,apagar);return;}
     if(evento.target.closest&&evento.target.closest('#anamnesisExpandToggle')){alternarBlocosAnamnese();return;}
     if(evento.target.closest&&evento.target.closest('[data-retry-anamnesis]')){tentarNovamenteAnamnese();return;}
     if(evento.target.closest&&evento.target.closest('[data-close-questionnaire]')){fecharModalQuestionario();return;}
@@ -1134,7 +1128,6 @@ function iniciarApp() {
     if(evento.key==='Escape'&&Array.from(menusTematizados.values()).some(function(registro){return registro.aberto;})){fecharMenusTematizados(true);return;}
     if(evento.key==='Escape'&&modal&&!modal.hidden){fecharAnamnese(true);return;}
     if(evento.key==='Escape'){fecharAjuda(true);return;}
-    if((evento.key==='Enter'||evento.key===' ')&&evento.target.matches&&evento.target.matches('[data-open-anamnesis]')){evento.preventDefault();abrirAnamnese(evento.target.dataset.openAnamnesis,evento.target);}
   });
   if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('resize',function(){if(ajudaAtiva)posicionarAjuda(ajudaAtiva);});
 }

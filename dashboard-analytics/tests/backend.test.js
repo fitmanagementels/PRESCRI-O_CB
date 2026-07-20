@@ -36,7 +36,8 @@ assert.strictEqual(fatos[1].status, 'pendente');
 const fatoPrivado = context.juntarFontesAnalytics_([
   { submissionId: 'SYN-PRIV', aluno: 'Pessoa Privada', profissional: 'Profissional A', dataEntrada: '2026-07-01', whatsapp: '5585999990000' },
 ], [], new Date(2026, 6, 4))[0];
-assert.strictEqual(Object.prototype.hasOwnProperty.call(fatoPrivado, 'whatsapp'), false, 'Telefone não pode entrar no payload ou cache analítico.');
+assert.strictEqual(Object.prototype.hasOwnProperty.call(fatoPrivado, 'whatsapp'), false, 'O cartão não deve receber o telefone como campo bruto.');
+assert.strictEqual(fatoPrivado.whatsappLink, 'https://wa.me/5585999990000', 'O cartão deve receber somente o link direto de WhatsApp.');
 
 assert.strictEqual(context.mediaAnalytics_([1, 2, 6]), 3);
 assert.strictEqual(context.medianaAnalytics_([1, 2, 9, 10]), 5.5);
