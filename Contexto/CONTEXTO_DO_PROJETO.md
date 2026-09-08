@@ -1,7 +1,7 @@
 # Contexto do Projeto — Prescrições CB
 
-**Última atualização:** 2026-09-08 15:15 -0300
-**Status:** implementação local validada; migração do catálogo do questionário precisa ser executada na planilha antes do uso do editor no PWA do gestor.
+**Última atualização:** 2026-09-08 17:10 -0300
+**Status:** dashboard de gestão redesenhado, validado e publicado na versão 12 do Apps Script.
 
 ## Resumo executivo
 
@@ -76,6 +76,15 @@ O PWA dos prescritores usa somente a versão publicada/ativa. Rascunhos ficam se
 - Foi incluído tratamento de WhatsApp protegido e ação de mensagem por link.
 - Foi encontrado e corrigido o defeito de migração: a rotina de preparação não criava os metadados de catálogo requeridos pelo editor.
 
+### 2026-09 — saúde operacional no dashboard
+
+- **Produtividade** passou a priorizar estoque atual, atrasadas, variação da fila e tempo mediano; o foco operacional e o ranking “Onde agir” vêm antes da tabela detalhada.
+- **Comparativos** passou a ter somente o gráfico focal **Entradas × Conclusões**, três comparações contra o período anterior e um ranking selecionável por atrasadas, SLA, mediana ou concluídas.
+- A base de SLA agora expõe quantas conclusões entraram no cálculo e quantas ficaram dentro do prazo; o P75 só é exibido com amostra segura de pelo menos cinco conclusões.
+- O visual mobile usa resumo 2 × 2 e rankings compactos, sem depender de uma sequência de barras ou de rolagem horizontal para entender a situação operacional.
+- Todas as métricas novas ou renomeadas têm ajuda contextual no botão **?**; a explicação do ranking muda junto com o critério selecionado.
+- A implantação pública existente foi atualizada para a versão **12** com a descrição `Dashboard CB — saúde operacional`, preservando a URL usada pela equipe.
+
 ## Validação local
 
 Após a correção de migração, os testes de backend operacional, backend do dashboard, integração segura com planilha e frontend do dashboard passaram. Antes do próximo deploy, executar a suíte completa:
@@ -95,7 +104,7 @@ node dashboard-analytics/tests/frontend.test.js
 
 - Repositório: `git@github.com:fitmanagementels/PRESCRI-O_CB.git`
 - Branch principal: `main`
-- Último envio: commit `8665009` — `feat: versionar questionário e corrigir migração`.
+- Última publicação Apps Script do dashboard: versão **12** — `Dashboard CB — saúde operacional`.
 - Arquivos de vínculo local com Apps Script (`.clasp.json`) e artefatos gerados de preview permanecem fora do controle de versão quando não já rastreados pelo histórico.
 
 ## Próximas ações obrigatórias no Google Apps Script
@@ -117,4 +126,4 @@ node dashboard-analytics/tests/frontend.test.js
 
 ## Como retomar em outro chat
 
-> Estamos no projeto Prescrições CB, com dois PWAs Apps Script ligados à planilha `1qyk_MfgfAP6-n_FlzVaHGcM9o2sIH6WVTv91TExkJNs`. O dashboard tem um editor de questionário versionado, com uma versão ativa, rascunho local, sem condicionais e sem drag-and-drop. O campo WhatsApp é obrigatório/protegido e só abre conversa via link. Houve um erro porque a planilha ainda tinha `Questionário` em A:H; a correção local já faz `Preparar base versionada` criar os metadados I:S. Primeiro conferir se `Código.gs` e `Questionario.gs` operacionais foram atualizados, executar a preparação e validar o editor. Depois manter os dois Apps Script sincronizados e testar antes de publicar.
+> Estamos no projeto Prescrições CB, com dois PWAs Apps Script ligados à planilha `1qyk_MfgfAP6-n_FlzVaHGcM9o2sIH6WVTv91TExkJNs`. O dashboard tem editor de questionário versionado, uma versão ativa, rascunho local, sem condicionais e sem drag-and-drop; WhatsApp é obrigatório/protegido e só abre conversa via link. A interface de gestão prioriza saúde operacional: Produtividade mostra estoque, atrasadas, variação da fila, mediana, foco e ranking; Comparativos mostra Entradas × Conclusões e um ranking selecionável. Com menos de cinco conclusões, prazo/P75 deve aparecer como amostra pequena. Antes de publicar, executar os testes do dashboard e manter a URL existente do Apps Script ao atualizar a implantação.

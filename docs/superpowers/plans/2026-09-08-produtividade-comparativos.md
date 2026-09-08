@@ -33,7 +33,7 @@
 - Consumes: `agregarProdutividadeAnalytics_(fatos, inicio, fim, profissional)` e fatos normalizados com `status`, `sla`, `tempoConclusaoDias`.
 - Produces: `amostraConclusoes`, `conclusoesNoPrazo`, `conclusoesComSla`, `tempoMediano`, `tempoP75Seguro`, `variacaoFila` e `insightOperacional` no payload de produtividade.
 
-- [ ] **Step 1: Write the failing backend tests**
+- [x] **Step 1: Write the failing backend tests**
 
 Adicionar ao teste uma amostra com seis conclusões e duas demandas abertas. Exigir que o agregado exponha base de SLA, prazo no SLA, P75 apenas com amostra suficiente e variação da fila:
 
@@ -48,12 +48,12 @@ assert.strictEqual(insight.tipo, 'atrasos');
 assert(insight.detalhe.includes('atrasada'));
 ```
 
-- [ ] **Step 2: Run the backend test to verify it fails**
+- [x] **Step 2: Run the backend test to verify it fails**
 
 Run: `node dashboard-analytics/tests/backend.test.js`  
 Expected: falha porque as propriedades e `gerarInsightOperacionalAnalytics_` ainda não existem.
 
-- [ ] **Step 3: Implement the minimal metric contract**
+- [x] **Step 3: Implement the minimal metric contract**
 
 Em `agregarProdutividadeAnalytics_`, calcular a amostra a partir de conclusões no período e SLA válido. Manter a fórmula existente de `taxaSla`, mas adicionar as bases explícitas:
 
@@ -73,12 +73,12 @@ return {
 
 Criar `gerarInsightOperacionalAnalytics_(equipe, porProfissional)` com precedência: atrasadas, variação positiva da fila, ausência de conclusões, situação estável. A função retorna somente `{ tipo, titulo, detalhe, profissional }`; usa contagens agregadas e nunca nomes de alunos. Inserir o resultado em `produtividade.insightOperacional` dentro de `montarPayloadDashboardAnalytics_`.
 
-- [ ] **Step 4: Run the backend test to verify it passes**
+- [x] **Step 4: Run the backend test to verify it passes**
 
 Run: `node dashboard-analytics/tests/backend.test.js`  
 Expected: `Backend analytics aprovado.`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add dashboard-analytics/Metricas.gs dashboard-analytics/tests/backend.test.js
@@ -97,7 +97,7 @@ git commit -m "feat: enriquecer métricas operacionais"
 - Consumes: o contrato de Task 1 em `payload.produtividade.equipe`, `payload.produtividade.porProfissional`, `payload.produtividade.insightOperacional` e `payload.comparativos.serieFluxo`.
 - Produces: `renderizarResumoOperacional`, `renderizarInsightOperacional`, `renderizarRankingOperacional`, seletor `rankingMetric` e um único gráfico focal em Comparativos.
 
-- [ ] **Step 1: Write failing frontend tests**
+- [x] **Step 1: Write failing frontend tests**
 
 Exigir os novos contêineres, seletor e ausência dos painéis visuais removidos:
 
@@ -113,12 +113,12 @@ assert(scripts.includes("['rankingMetric','change'"));
 assert(scripts.includes('Entradas × Conclusões'));
 ```
 
-- [ ] **Step 2: Run the frontend test to verify it fails**
+- [x] **Step 2: Run the frontend test to verify it fails**
 
 Run: `node dashboard-analytics/tests/frontend.test.js`  
 Expected: falha porque os IDs, renderizadores e seletor ainda não existem.
 
-- [ ] **Step 3: Implement the focused content hierarchy**
+- [x] **Step 3: Implement the focused content hierarchy**
 
 Em `index.html`:
 
@@ -147,12 +147,12 @@ function renderizarRankingOperacional(profissionais, campo) {
 
 `renderizarProdutividade` usa resumo, insight e ranking de atrasadas. `renderizarComparativos` renderiza apenas os três deltas, `flowChart` e o ranking cuja dimensão vem de `state.rankingMetric`. O gráfico de linha continua acessível e usa título `Entradas × Conclusões`.
 
-- [ ] **Step 4: Run frontend test to verify it passes**
+- [x] **Step 4: Run frontend test to verify it passes**
 
 Run: `node dashboard-analytics/tests/frontend.test.js`  
 Expected: `Frontend analytics aprovado.`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add dashboard-analytics/index.html dashboard-analytics/scripts.html dashboard-analytics/charts.html dashboard-analytics/tests/frontend.test.js
@@ -172,7 +172,7 @@ git commit -m "feat: simplificar leitura de produtividade"
 - Consumes: IDs e renderizadores de Task 2, além do catálogo `GUIAS_AJUDA` em `scripts.html`.
 - Produces: layout 2 × 2 de resumo, ranking em linhas compactas, detalhe progressivo no mobile e dicas atualizadas para todos os elementos novos.
 
-- [ ] **Step 1: Write failing style and help tests**
+- [x] **Step 1: Write failing style and help tests**
 
 Adicionar verificações para a cobertura das novas dicas e regras mobile:
 
@@ -187,12 +187,12 @@ assert(styles.includes('@media (max-width: 640px)'));
 assert(!styles.includes('.chart-wide{grid-column:1/-1}'));
 ```
 
-- [ ] **Step 2: Run frontend test to verify it fails**
+- [x] **Step 2: Run frontend test to verify it fails**
 
 Run: `node dashboard-analytics/tests/frontend.test.js`  
 Expected: falha pelas chaves de ajuda e classes ainda ausentes.
 
-- [ ] **Step 3: Implement style and help coverage**
+- [x] **Step 3: Implement style and help coverage**
 
 Criar superfícies discretas para `.operational-summary`, `.operational-insight`, `.ranking-list` e `.ranking-row`. No mobile, manter resumo 2 × 2; alinhar valor e rótulo numa única linha de ranking; mostrar o detalhe da tabela somente após ação explícita. Não usar barras como substituto do ranking.
 
@@ -215,7 +215,7 @@ ranking_metric_sla: {
 
 Manter a dica `grafico_fluxo` coerente com o único gráfico focal e ajustar quaisquer referências antigas a gráficos removidos.
 
-- [ ] **Step 4: Build preview and run verification**
+- [x] **Step 4: Build preview and run verification**
 
 Run:
 
@@ -229,7 +229,7 @@ node tests/responsive.test.js
 
 Expected: todos retornam sucesso; a captura mobile não contém sequência de gráficos de barras por profissional.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add dashboard-analytics/styles.html dashboard-analytics/scripts.html dashboard-analytics/tests/frontend.test.js dashboard-analytics/preview.html
@@ -247,11 +247,11 @@ git commit -m "style: priorizar saúde operacional no mobile"
 - Consumes: implementação validada de Tasks 1–3 e implantação Apps Script `1ZQuF5AlX-z8clgLe2R00EoRHNK7Olmcz0JzKSXkHN7ktU8-SJDoHq0XZ`.
 - Produces: documentação de uso coerente, contexto atualizado e implantação pública que preserva a URL existente.
 
-- [ ] **Step 1: Update documentation**
+- [x] **Step 1: Update documentation**
 
 Documentar que Produtividade prioriza estoque, atrasadas, variação e mediana; Comparativos usa um gráfico focal e ranking selecionável; explicar a amostra pequena e as dicas “?”. Atualizar o contexto com data, decisões e versão publicada.
 
-- [ ] **Step 2: Verify documentation and source state**
+- [x] **Step 2: Verify documentation and source state**
 
 Run:
 
@@ -264,7 +264,7 @@ node dashboard-analytics/tests/frontend.test.js
 
 Expected: sem whitespace inválido, testes aprovados e somente arquivos previstos modificados.
 
-- [ ] **Step 3: Push and deploy**
+- [x] **Step 3: Push and deploy**
 
 Run no diretório `dashboard-analytics`:
 
@@ -278,7 +278,7 @@ npx @google/clasp@latest deployments
 
 Expected: a implantação pública existente aponta para a versão criada, mantendo a URL.
 
-- [ ] **Step 4: Commit and send source to GitHub**
+- [x] **Step 4: Commit and send source to GitHub**
 
 ```bash
 git add dashboard-analytics/README_DEPLOY.md Contexto/CONTEXTO_DO_PROJETO.md Contexto/CONTEXTO_DO_PROJETO.html

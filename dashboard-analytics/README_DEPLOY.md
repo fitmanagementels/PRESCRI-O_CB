@@ -95,6 +95,9 @@ Essa URL é diferente da URL do app operacional. Em alterações futuras, use **
 - O botão **Atualizar dados** também atualiza o snapshot do dia.
 - O gatilho diário mantém a evolução de backlog e produtividade registrada mesmo quando ninguém abre o app.
 - A visão padrão de Acompanhamento é **A fazer**, combinação de demandas não transferidas e aguardando prescrição.
+- Na aba **Produtividade**, a leitura começa pela saúde da operação: estoque atual, demandas atrasadas, variação da fila e tempo mediano. O bloco **Foco operacional** e o ranking **Onde agir** indicam a prioridade antes da tabela detalhada.
+- Na aba **Comparativos**, **Entradas × Conclusões** é o único gráfico principal. Os cartões comparam recebidas, concluídas e variação da fila com o período anterior; o ranking pode alternar entre atrasadas, SLA, tempo mediano e concluídas.
+- O botão **?** ao lado de cada indicador explica o cálculo, o período usado e limitações da interpretação. Quando houver menos de cinco conclusões, indicadores de prazo são exibidos como **Amostra pequena**.
 - Na aba **Acompanhamento**, clique em qualquer cartão ou em **Ver anamnese** para abrir a ficha completa do aluno em um pop-up.
 - Cada cartão de demanda apresenta as ações de WhatsApp, exclusão e **Ver anamnese**. O cartão em si é apenas informativo e não abre a ficha ao ser clicado.
 - O ícone verde abre a conversa de WhatsApp quando a demanda tiver um número válido. O ícone vermelho exclui a demanda de `Respostas` e a respectiva linha de `Monitoramento`. A exclusão exige digitar `EXCLUIR`; o ID, a data/hora, o motivo e a origem ficam em `Analytics_Exclusoes`.
@@ -113,6 +116,7 @@ A versão ativa não é editada: o gestor cria uma cópia como rascunho, trabalh
 - O histórico de etapas começa na data em que este dashboard for configurado. Estados passados não são inventados.
 - Sem uma data de transferência, não é possível medir separadamente o tempo entre transferência e prescrição.
 - Médias, medianas e P75 com menos de cinco conclusões são sinalizados como amostra pequena.
+- A variação da fila é entradas menos conclusões dentro do período; ela não substitui o estoque atual, que é sempre a situação aberta no momento da consulta.
 - Uma resposta existente em `Respostas`, mas ainda ausente em `Monitoramento`, é considerada não transferida em memória; a fonte não é alterada.
 
 ## Verificação local
@@ -124,6 +128,7 @@ node dashboard-analytics/scripts/build-preview.js
 node dashboard-analytics/tests/backend.test.js
 node dashboard-analytics/tests/sheets.test.js
 node dashboard-analytics/tests/frontend.test.js
+node tests/responsive.test.js
 ```
 
 Abra `dashboard-analytics/preview.html` para revisar a interface com dados totalmente sintéticos.
