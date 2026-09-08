@@ -8,10 +8,16 @@ const scripts = fs.readFileSync('dashboard-analytics/scripts.html', 'utf8');
 const charts = fs.readFileSync('dashboard-analytics/charts.html', 'utf8');
 const preview = fs.existsSync('dashboard-analytics/preview.html') ? fs.readFileSync('dashboard-analytics/preview.html', 'utf8') : '';
 ['Acompanhamento', 'Produtividade', 'Comparativos'].forEach((label) => assert(index.includes(label)));
-['backlogStageChart', 'slaChart', 'timeChart'].forEach((id) => assert(index.includes(`id="${id}"`)));
 assert(index.includes('data-tab="acompanhamento"'));
 assert(index.includes('data-tab="questionario"'));
 assert(index.includes('data-view="questionario"'));
+['operationalSummary', 'operationalInsight', 'attentionRanking', 'comparisonRanking', 'rankingMetric'].forEach((id) => {
+  assert(index.includes(`id="${id}"`), `O contêiner ${id} deve existir.`);
+});
+assert(index.includes('id="rankingMetricHelp"'), 'A ajuda do ranking comparativo deve acompanhar a métrica selecionada.');
+['backlogChart', 'professionalChart', 'backlogStageChart', 'slaChart', 'timeChart'].forEach((id) => {
+  assert(!index.includes(`id="${id}"`), `O gráfico secundário ${id} deve ser removido.`);
+});
 assert(styles.includes('grid-template-columns:repeat(4,1fr)'), 'A navegação com quatro abas deve permanecer em uma única linha.');
 assert(index.includes('id="helpPopover"'));
 assert(index.includes('id="anamnesisModal"'));
@@ -28,6 +34,11 @@ assert.strictEqual((index.match(/id="helpPopover"/g) || []).length, 1, 'Deve exi
 ));
 assert(scripts.includes('getDashboardAnalytics'));
 assert(scripts.includes('atualizarDashboardAnalytics'));
+assert(scripts.includes('function renderizarResumoOperacional'));
+assert(scripts.includes('function renderizarRankingOperacional'));
+assert(scripts.includes('ajudaRanking(state.rankingMetric)'));
+assert(scripts.includes("['rankingMetric','change'"));
+assert(scripts.includes('Entradas × Conclusões'));
 assert(scripts.includes('function filtrosDashboard'), 'Os filtros globais devem ser enviados ao backend.');
 assert(
   /function carregarDados\(forcar\)[\s\S]*chamarServidor\(forcar\?'atualizarDashboardAnalytics':'getDashboardAnalytics',\s*filtrosDashboard\(\)\)/.test(scripts),
@@ -73,6 +84,9 @@ assert(/min-height:\s*44px/.test(styles));
 assert(styles.includes('.demand-card .stage{display:contents}'), 'No mobile, a etapa deve participar diretamente da grade compacta do cartão.');
 assert(styles.includes('.demand-card .stage .badge{grid-column:3;grid-row:2/4;align-self:center}'), 'O SLA deve ocupar a terceira coluna da faixa operacional no mobile.');
 assert(styles.includes('.help-button'));
+assert(styles.includes('.operational-summary{display:grid'), 'O resumo operacional precisa de layout próprio.');
+assert(styles.includes('.ranking-row{display:grid'), 'Os rankings precisam de cartões compactos.');
+assert(styles.includes('.operational-insight{display:flex'), 'O foco operacional precisa de destaque visual.');
 assert(charts.includes('function renderLineChart'));
 assert(charts.includes('function renderBarChart'));
 assert(!scripts.toLowerCase().includes('nota de produtividade'));
@@ -116,6 +130,11 @@ assert(sandbox.botaoAjuda('kpi_a_fazer').includes('data-help="kpi_a_fazer"'));
 assert(sandbox.botaoAjuda('kpi_a_fazer').includes('aria-controls="helpPopover"'));
 const guiasAjuda = vm.runInContext('GUIAS_AJUDA', sandbox);
 ['kpi_a_fazer', 'grupo_producao', 'grafico_fluxo'].forEach((chave) => assert(guiasAjuda[chave]));
+[
+  'metrica_variacao_fila', 'insight_operacional', 'ranking_atencao',
+  'ranking_metric_atrasadas', 'ranking_metric_sla', 'ranking_metric_mediana',
+  'ranking_metric_concluidas', 'comparacao_variacao_fila'
+].forEach((chave) => assert(guiasAjuda[chave], `Guia da nova leitura operacional ausente: ${chave}`));
 [
   'kpi_atrasadas', 'kpi_sla', 'lista_demandas', 'metrica_recebidas',
   'metrica_mediana', 'metrica_p75', 'metrica_taxa_conclusao',

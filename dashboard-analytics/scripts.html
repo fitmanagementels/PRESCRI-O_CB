@@ -1,7 +1,7 @@
 <script>
 const state = {
   abaAtiva: 'acompanhamento', payload: null, periodo: '30', profissional: 'todos',
-  situacao: 'a_fazer', prazo: 'todos', busca: '', ranking: 'concluidas', carregando: false,
+  situacao: 'a_fazer', prazo: 'todos', busca: '', ranking: 'concluidas', rankingMetric: 'atrasadas', carregando: false,
   anamneses: {}, carregamentosAnamnese: {}, anamneseAtual: '', ultimoFocoAnamnese: null,
   questionarioGestor: null, questionarioCarregando: false, questionarioAcaoPendente: false,
 };
@@ -187,6 +187,10 @@ const GUIAS_AJUDA = Object.freeze({
     titulo: 'Saldo do período',
     texto: 'É a diferença entre recebidas e concluídas no período. Saldo positivo significa que entraram mais demandas do que foram finalizadas; não é uma nota de desempenho.'
   }),
+  metrica_variacao_fila: Object.freeze({
+    titulo: 'Variação da fila',
+    texto: 'É a diferença entre demandas recebidas e prescrições concluídas no período. Valor positivo indica que a fila cresceu; valor negativo, que a equipe concluiu mais do que recebeu.'
+  }),
   grupo_backlog: Object.freeze({
     titulo: 'Grupo Backlog',
     texto: 'Mostra o estoque atual de trabalho ainda aberto. Diferentemente das entradas e conclusões, o backlog representa a situação de agora, mesmo que a demanda tenha começado antes do período.'
@@ -247,6 +251,14 @@ const GUIAS_AJUDA = Object.freeze({
     titulo: 'Gargalos observados',
     texto: 'Alertas gerados por regras simples, como ausência de conclusões, saldo positivo, atrasos ou amostra pequena. Servem como pontos de verificação e não explicam a causa.'
   }),
+  insight_operacional: Object.freeze({
+    titulo: 'Foco operacional',
+    texto: 'É a leitura prioritária gerada a partir do estoque atual, das demandas atrasadas e da variação da fila. Serve para orientar a próxima ação da equipe, não para avaliar pessoas isoladamente.'
+  }),
+  ranking_atencao: Object.freeze({
+    titulo: 'Onde agir',
+    texto: 'Ordena os profissionais pela quantidade de demandas atrasadas no estoque atual. Use para decidir onde apoiar ou cobrar primeiro; o ranking não é uma nota de desempenho.'
+  }),
   tabela_produtividade: Object.freeze({
     titulo: 'Tabela de profissionais',
     texto: 'Coloca os mesmos indicadores lado a lado por profissional. A ordenação escolhida destaca apenas uma variável e não cria uma classificação geral de desempenho.'
@@ -262,6 +274,10 @@ const GUIAS_AJUDA = Object.freeze({
   comparacao_concluidas: Object.freeze({
     titulo: 'Concluídas: atual x anterior',
     texto: 'Compara prescrições finalizadas pela data de conclusão nos dois períodos equivalentes, independentemente da data em que entraram.'
+  }),
+  comparacao_variacao_fila: Object.freeze({
+    titulo: 'Variação da fila: atual x anterior',
+    texto: 'Compara a diferença entre recebidas e concluídas no período atual com a do período anterior equivalente. Ajuda a identificar se a capacidade acompanha a demanda.'
   }),
   comparacao_backlog: Object.freeze({
     titulo: 'Backlog na comparação',
@@ -294,6 +310,22 @@ const GUIAS_AJUDA = Object.freeze({
   grafico_tempo: Object.freeze({
     titulo: 'Tempo até a prescrição',
     texto: 'Compara média, mediana e P75 dos dias até a conclusão. Use a mediana para o caso típico e o P75 para observar a faixa mais lenta.'
+  }),
+  ranking_metric_atrasadas: Object.freeze({
+    titulo: 'Ranking por atrasadas',
+    texto: 'Ordena do maior para o menor número de demandas abertas além do SLA de 2 dias. É o melhor ponto de partida para reduzir risco operacional.'
+  }),
+  ranking_metric_sla: Object.freeze({
+    titulo: 'Ranking por SLA',
+    texto: 'Ordena do menor para o maior percentual de conclusões realizadas em até 2 dias. O indicador só aparece quando existem conclusões com datas válidas.'
+  }),
+  ranking_metric_mediana: Object.freeze({
+    titulo: 'Ranking por tempo mediano',
+    texto: 'Ordena do maior para o menor tempo mediano até a prescrição. Quando há menos de 5 conclusões, o resultado aparece como amostra pequena para evitar interpretações frágeis.'
+  }),
+  ranking_metric_concluidas: Object.freeze({
+    titulo: 'Ranking por concluídas',
+    texto: 'Ordena pelo total de prescrições finalizadas no período. Leia junto do estoque e das atrasadas, pois volume sozinho não revela a situação da fila.'
   }),
   tabela_comparativa: Object.freeze({
     titulo: 'Tabela comparativa',
@@ -439,11 +471,11 @@ function mockPayload() {
     { submissionId:'SYN-003', aluno:'Pessoa Gama', profissional:'Profissional A', dataEntrada:'2026-07-08', transferida:true, prescrita:true, dataConclusao:'2026-07-09', status:'prescrita', idadeDias:5, tempoConclusaoDias:1, sla:'dentro_prazo' },
   ];
   const profs = [
-    { profissional:'Profissional A', recebidas:2, concluidas:1, saldo:1, backlog:1, naoTransferidas:1, pendentes:0, atrasadas:0, taxaConclusao:50, taxaSla:100, tempoMedio:1, tempoMediano:1, tempoP75:1, maiorEspera:0, amostraInsuficiente:true },
-    { profissional:'Profissional B', recebidas:1, concluidas:0, saldo:1, backlog:1, naoTransferidas:0, pendentes:1, atrasadas:1, taxaConclusao:0, taxaSla:null, tempoMedio:null, tempoMediano:null, tempoP75:null, maiorEspera:3, amostraInsuficiente:true },
+    { profissional:'Profissional A', recebidas:2, concluidas:1, saldo:1, variacaoFila:1, backlog:1, naoTransferidas:1, pendentes:0, atrasadas:0, taxaConclusao:50, taxaSla:100, conclusoesComSla:1, conclusoesNoPrazo:1, tempoMedio:1, tempoMediano:1, tempoP75:1, tempoP75Seguro:null, maiorEspera:0, amostraConclusoes:1, amostraInsuficiente:true },
+    { profissional:'Profissional B', recebidas:1, concluidas:0, saldo:1, variacaoFila:1, backlog:1, naoTransferidas:0, pendentes:1, atrasadas:1, taxaConclusao:0, taxaSla:null, conclusoesComSla:0, conclusoesNoPrazo:0, tempoMedio:null, tempoMediano:null, tempoP75:null, tempoP75Seguro:null, maiorEspera:3, amostraConclusoes:0, amostraInsuficiente:true },
   ];
-  const equipe = { profissional:'__EQUIPE__', recebidas:3, concluidas:1, saldo:2, backlog:2, naoTransferidas:1, pendentes:1, atrasadas:1, taxaConclusao:33.3, taxaSla:100, tempoMedio:1, tempoMediano:1, tempoP75:1, maiorEspera:3, producaoDiaria:0.03, producaoSemanal:0.2, amostraInsuficiente:true };
-  return { ok:true, meta:{ atualizadoEm:'2026-07-13T13:00:00-03:00', inicio:'2026-06-14', fim:'2026-07-13', granularidade:'diaria', slaDias:2 }, filtros:{ profissionais:['Profissional A','Profissional B'] }, acompanhamento:fatos, produtividade:{ equipe:equipe, porProfissional:profs, diagnosticos:[{ severidade:'atencao', titulo:'Backlog em crescimento', detalhe:'As entradas superaram as conclusões no período.' }], comparacaoAnterior:{ recebidas:{atual:3,anterior:2,variacaoAbsoluta:1,variacaoPercentual:50}, concluidas:{atual:1,anterior:2,variacaoAbsoluta:-1,variacaoPercentual:-50}, backlog:{atual:2,anterior:1,variacaoAbsoluta:1,variacaoPercentual:100}, atrasadas:{atual:1,anterior:0,variacaoAbsoluta:1,variacaoPercentual:null} } }, comparativos:{ serieFluxo:[{periodo:'2026-07-08',entradas:1,conclusoes:0},{periodo:'2026-07-09',entradas:0,conclusoes:1},{periodo:'2026-07-10',entradas:1,conclusoes:0},{periodo:'2026-07-13',entradas:1,conclusoes:0}], serieBacklog:[{periodo:'2026-07-08',backlog:1},{periodo:'2026-07-09',backlog:0},{periodo:'2026-07-10',backlog:1},{periodo:'2026-07-13',backlog:2}], porProfissional:profs, tabela:profs, atualAnterior:{} }, qualidade:[] };
+  const equipe = { profissional:'__EQUIPE__', recebidas:3, concluidas:1, saldo:2, variacaoFila:2, backlog:2, naoTransferidas:1, pendentes:1, atrasadas:1, taxaConclusao:33.3, taxaSla:100, conclusoesComSla:1, conclusoesNoPrazo:1, tempoMedio:1, tempoMediano:1, tempoP75:1, tempoP75Seguro:null, maiorEspera:3, amostraConclusoes:1, producaoDiaria:0.03, producaoSemanal:0.2, amostraInsuficiente:true };
+  return { ok:true, meta:{ atualizadoEm:'2026-07-13T13:00:00-03:00', inicio:'2026-06-14', fim:'2026-07-13', granularidade:'diaria', slaDias:2 }, filtros:{ profissionais:['Profissional A','Profissional B'] }, acompanhamento:fatos, produtividade:{ equipe:equipe, porProfissional:profs, insightOperacional:{tipo:'atrasos',titulo:'Há demanda atrasada para priorizar',detalhe:'1 demanda aberta ultrapassou o SLA. Comece pela pessoa responsável e acompanhe a transferência.'}, comparacaoAnterior:{ recebidas:{atual:3,anterior:2,variacaoAbsoluta:1,variacaoPercentual:50}, concluidas:{atual:1,anterior:2,variacaoAbsoluta:-1,variacaoPercentual:-50}, variacaoFila:{atual:2,anterior:0,variacaoAbsoluta:2,variacaoPercentual:null} } }, comparativos:{ serieFluxo:[{periodo:'2026-07-08',entradas:1,conclusoes:0},{periodo:'2026-07-09',entradas:0,conclusoes:1},{periodo:'2026-07-10',entradas:1,conclusoes:0},{periodo:'2026-07-13',entradas:1,conclusoes:0}], serieBacklog:[{periodo:'2026-07-08',backlog:1},{periodo:'2026-07-09',backlog:0},{periodo:'2026-07-10',backlog:1},{periodo:'2026-07-13',backlog:2}], porProfissional:profs, tabela:profs, atualAnterior:{} }, qualidade:[] };
 }
 
 function mockAnamnese(submissionId) {
@@ -692,53 +724,76 @@ function diagnosticosSelecionados(p) {
   if (p.amostraInsuficiente) a.push({severidade:'informativo',titulo:'Amostra pequena',detalhe:'Interprete médias e tendência com cautela: há menos de 5 conclusões.'});
   return a.length ? a : [{severidade:'informativo',titulo:'Sem gargalo crítico no recorte',detalhe:'Acompanhe a tendência e as demandas individuais.'}];
 }
+function textoSla(p) {
+  if (p.taxaSla == null || !p.conclusoesComSla) return '—';
+  return percentual(p.taxaSla) + ' · ' + numero(p.conclusoesNoPrazo) + ' de ' + numero(p.conclusoesComSla);
+}
+function rotuloRanking(campo) {
+  return { atrasadas:'demandas atrasadas', taxaSla:'SLA nas conclusões', tempoMediano:'tempo mediano', concluidas:'conclusões' }[campo] || campo;
+}
+function ajudaRanking(campo) {
+  return { atrasadas:'ranking_metric_atrasadas', taxaSla:'ranking_metric_sla', tempoMediano:'ranking_metric_mediana', concluidas:'ranking_metric_concluidas' }[campo] || 'ranking_atencao';
+}
+function valorRanking(p, campo) {
+  if (campo === 'taxaSla') return textoSla(p);
+  if (campo === 'tempoMediano') return p.amostraInsuficiente ? 'Amostra pequena' : dias(p.tempoMediano);
+  return numero(p[campo]);
+}
+function ordenarRanking(profissionais, campo) {
+  return profissionais.slice().sort(function(a,b){
+    if (campo === 'taxaSla') {
+      if (a.taxaSla == null) return 1;
+      if (b.taxaSla == null) return -1;
+      return a.taxaSla - b.taxaSla;
+    }
+    const av = Number(a[campo]), bv = Number(b[campo]);
+    return campo === 'tempoMediano' ? bv - av : bv - av;
+  });
+}
+function renderizarRankingOperacional(destino, profissionais, campo) {
+  if (!destino) return;
+  if (!profissionais || !profissionais.length) { destino.innerHTML = '<div class="empty-state">Ainda não há profissionais no recorte selecionado.</div>'; return; }
+  destino.innerHTML = ordenarRanking(profissionais, campo).map(function(p, indice) {
+    const contexto = campo === 'atrasadas'
+      ? numero(p.pendentes) + ' aguardando prescrição · ' + numero(p.backlog) + ' no estoque'
+      : numero(p.atrasadas) + ' atrasadas · ' + numero(p.backlog) + ' no estoque';
+    return '<article class="ranking-row' + (p.atrasadas ? ' is-critical' : '') + '"><span class="ranking-position">' + (indice + 1) + '</span><div class="ranking-copy"><strong>' + esc(p.profissional) + '</strong><span>' + esc(contexto) + '</span></div><div class="ranking-value"><strong>' + esc(valorRanking(p, campo)) + '</strong><span>' + esc(rotuloRanking(campo)) + '</span></div></article>';
+  }).join('');
+}
+function renderizarResumoOperacional(p) {
+  const destino = el('operationalSummary'); if (!destino) return;
+  const variacao = p.variacaoFila != null ? p.variacaoFila : p.saldo;
+  destino.innerHTML = [
+    metricItem(numero(p.backlog), 'Estoque atual', 'metrica_backlog'),
+    metricItem(numero(p.atrasadas), 'Atrasadas', 'metrica_atrasadas'),
+    metricItem((variacao > 0 ? '+' : '') + numero(variacao), 'Variação da fila', 'metrica_variacao_fila'),
+    metricItem(p.amostraInsuficiente ? 'Amostra pequena' : dias(p.tempoMediano), 'Tempo mediano', 'metrica_mediana')
+  ].join('');
+}
 function renderizarProdutividade() {
   const p = produtividadeSelecionada(); if (!p) return;
   const contexto = el('productivityContext'); if (contexto) contexto.innerHTML = '<strong>' + esc(rotuloProfissional(p.profissional)) + '</strong> · período de ' + formatarData(state.payload.meta.inicio) + ' a ' + formatarData(state.payload.meta.fim);
-  const metrics = el('productivityMetrics');
-  if (metrics) metrics.innerHTML =
-    metricGroup('Produção',[
-      metricItem(numero(p.recebidas),'Recebidas','metrica_recebidas'),
-      metricItem(numero(p.concluidas),'Concluídas','metrica_concluidas'),
-      metricItem((p.saldo>0?'+':'')+numero(p.saldo),'Saldo','metrica_saldo')
-    ],'grupo_producao') +
-    metricGroup('Backlog',[
-      metricItem(numero(p.backlog),'Total','metrica_backlog'),
-      metricItem(numero(p.naoTransferidas),'Não transferidas','metrica_nao_transferidas'),
-      metricItem(numero(p.pendentes),'A prescrever','metrica_pendentes'),
-      metricItem(numero(p.atrasadas),'Atrasadas','metrica_atrasadas')
-    ],'grupo_backlog') +
-    metricGroup('Velocidade',[
-      metricItem(dias(p.tempoMedio),'Média','metrica_media'),
-      metricItem(dias(p.tempoMediano),'Mediana','metrica_mediana'),
-      metricItem(dias(p.tempoP75),'P75','metrica_p75'),
-      metricItem(dias(p.maiorEspera),'Maior espera','metrica_maior_espera')
-    ],'grupo_velocidade') +
-    metricGroup('Prazo e conclusão',[
-      metricItem(percentual(p.taxaConclusao),'Taxa de conclusão','metrica_taxa_conclusao'),
-      metricItem(percentual(p.taxaSla),'Dentro do SLA','metrica_taxa_sla'),
-      metricItem(numero(p.producaoSemanal),'Conclusões/semana','metrica_producao_semanal')
-    ],'grupo_prazo');
-  const dl = el('diagnosticList'); if (dl) dl.innerHTML = diagnosticosSelecionados(p).map(function(d){return '<article class="diagnostic '+d.severidade+'"><strong>'+esc(d.titulo)+'</strong><p>'+esc(d.detalhe)+'</p></article>';}).join('');
+  renderizarResumoOperacional(p);
+  const insight = state.payload.produtividade.insightOperacional || { tipo:'informativo', titulo:'Acompanhe a operação', detalhe:'Use o ranking abaixo para localizar onde agir primeiro.' };
+  const blocoInsight = el('operationalInsight');
+  if (blocoInsight) blocoInsight.innerHTML = '<div class="insight-copy"><span class="eyebrow">Foco operacional</span><strong>' + esc(insight.titulo) + '</strong><p>' + esc(insight.detalhe) + '</p></div>' + botaoAjuda('insight_operacional');
+  renderizarRankingOperacional(el('attentionRanking'), state.payload.produtividade.porProfissional, 'atrasadas');
   let profissionais = state.payload.produtividade.porProfissional.slice();
   profissionais.sort(function(a,b){ const av=a[state.ranking],bv=b[state.ranking]; return (bv==null?-Infinity:bv)-(av==null?-Infinity:av); });
-  const tbody = el('productivityTable'); if (tbody) tbody.innerHTML = profissionais.map(function(x){return '<tr><td>'+esc(x.profissional)+'</td><td>'+numero(x.recebidas)+'</td><td>'+numero(x.concluidas)+'</td><td>'+numero(x.backlog)+'</td><td>'+numero(x.atrasadas)+'</td><td>'+percentual(x.taxaSla)+'</td><td>'+dias(x.tempoMediano)+'</td></tr>';}).join('');
+  const tbody = el('productivityTable'); if (tbody) tbody.innerHTML = profissionais.map(function(x){return '<tr><td>'+esc(x.profissional)+'</td><td>'+numero(x.concluidas)+'</td><td>'+numero(x.backlog)+'</td><td>'+numero(x.atrasadas)+'</td><td>'+textoSla(x)+'</td><td>'+(x.amostraInsuficiente?'Amostra pequena':dias(x.tempoMediano))+'</td></tr>';}).join('');
 }
 
 function deltaCard(rotulo, item, ajuda) { if (!item) return ''; const sinal=item.variacaoAbsoluta>0?'+':''; return '<article class="delta-card">'+botaoAjuda(ajuda)+'<span>'+esc(rotulo)+'</span><strong>'+numero(item.atual)+'</strong><small>'+sinal+numero(item.variacaoAbsoluta)+' vs. período anterior</small></article>'; }
 function renderizarComparativos() {
   if (!state.payload) return;
   const comp = state.payload.produtividade.comparacaoAnterior || {}, resumo=el('comparisonSummary');
-  if(resumo) resumo.innerHTML=deltaCard('Recebidas',comp.recebidas,'comparacao_recebidas')+deltaCard('Concluídas',comp.concluidas,'comparacao_concluidas')+deltaCard('Backlog',comp.backlog,'comparacao_backlog')+deltaCard('Atrasadas',comp.atrasadas,'comparacao_atrasadas');
-  const flow=el('flowChart'); if(flow) flow.innerHTML=renderLineChart(state.payload.comparativos.serieFluxo,{titulo:'Entradas e conclusões',series:[{campo:'entradas',rotulo:'Entradas'},{campo:'conclusoes',rotulo:'Conclusões',classe:'secondary'}]});
-  const backlog=el('backlogChart'); if(backlog) backlog.innerHTML=renderLineChart(state.payload.comparativos.serieBacklog,{titulo:'Backlog histórico',campo:'backlog',rotulo:'Backlog'});
-  const profs=state.payload.comparativos.porProfissional || [], chart=el('professionalChart'); if(chart) chart.innerHTML=renderBarChart(profs.map(function(p){return Object.assign({rotulo:p.profissional},p);}),{titulo:'Produção por profissional',series:[{campo:'recebidas',rotulo:'Recebidas'},{campo:'concluidas',rotulo:'Concluídas',classe:'secondary'}]});
-  const porProfissional=profs.map(function(p){return Object.assign({rotulo:p.profissional},p);});
-  const etapas=el('backlogStageChart'); if(etapas) etapas.innerHTML=renderBarChart(porProfissional,{titulo:'Composição do backlog por profissional',series:[{campo:'naoTransferidas',rotulo:'Não transferidas'},{campo:'pendentes',rotulo:'A prescrever',classe:'secondary'}]});
-  const sla=el('slaChart'); if(sla) sla.innerHTML=renderBarChart(porProfissional.filter(function(p){return p.taxaSla!=null;}),{titulo:'Cumprimento do SLA por profissional',campo:'taxaSla',rotulo:'Dentro do SLA (%)'});
-  const tempos=el('timeChart'); if(tempos) tempos.innerHTML=renderBarChart(porProfissional.filter(function(p){return p.tempoMedio!=null||p.tempoMediano!=null||p.tempoP75!=null;}),{titulo:'Tempo até a prescrição por profissional',series:[{campo:'tempoMedio',rotulo:'Média'},{campo:'tempoMediano',rotulo:'Mediana',classe:'secondary'},{campo:'tempoP75',rotulo:'P75',classe:'tertiary'}]});
+  if(resumo) resumo.innerHTML=deltaCard('Recebidas',comp.recebidas,'comparacao_recebidas')+deltaCard('Concluídas',comp.concluidas,'comparacao_concluidas')+deltaCard('Variação da fila',comp.variacaoFila || comp.saldo,'comparacao_variacao_fila');
+  const flow=el('flowChart'); if(flow) flow.innerHTML=renderLineChart(state.payload.comparativos.serieFluxo,{titulo:'Entradas × Conclusões',series:[{campo:'entradas',rotulo:'Entradas'},{campo:'conclusoes',rotulo:'Conclusões',classe:'secondary'}]});
+  const profs=state.payload.comparativos.porProfissional || [];
+  const ajuda = el('rankingMetricHelp'); if (ajuda) ajuda.dataset.help = ajudaRanking(state.rankingMetric);
+  renderizarRankingOperacional(el('comparisonRanking'), profs, state.rankingMetric);
   const caption=el('flowCaption'); if(caption) caption.textContent=state.payload.meta.granularidade==='diaria'?'Visão diária':state.payload.meta.granularidade==='semanal'?'Visão semanal':'Visão mensal';
-  const tbody=el('comparisonTable'); if(tbody) tbody.innerHTML=profs.map(function(x){return '<tr><td>'+esc(x.profissional)+'</td><td>'+numero(x.recebidas)+'</td><td>'+numero(x.concluidas)+'</td><td>'+numero(x.saldo)+'</td><td>'+numero(x.naoTransferidas)+'</td><td>'+numero(x.pendentes)+'</td><td>'+percentual(x.taxaSla)+'</td><td>'+dias(x.tempoP75)+'</td></tr>';}).join('');
+  const tbody=el('comparisonTable'); if(tbody) tbody.innerHTML=profs.map(function(x){return '<tr><td>'+esc(x.profissional)+'</td><td>'+numero(x.recebidas)+'</td><td>'+numero(x.concluidas)+'</td><td>'+numero(x.variacaoFila != null ? x.variacaoFila : x.saldo)+'</td><td>'+numero(x.naoTransferidas)+'</td><td>'+numero(x.pendentes)+'</td><td>'+textoSla(x)+'</td><td>'+(x.tempoP75Seguro == null?'Amostra pequena':dias(x.tempoP75Seguro))+'</td></tr>';}).join('');
 }
 
 function clonarQuestionario(valor) { return JSON.parse(JSON.stringify(valor)); }
@@ -879,7 +934,7 @@ function iniciarApp() {
   inicializarMenusTematizados();
   document.querySelectorAll('[data-help]').forEach(function(botao){botao.setAttribute('aria-controls','helpPopover');});
   document.querySelectorAll('[data-tab]').forEach(function(b){b.addEventListener('click',function(){trocarAba(b.dataset.tab);});});
-  const eventos=[['refreshButton','click',function(){carregarDados(true);}],['searchInput','input',function(e){state.busca=e.target.value;renderizarAcompanhamento();}],['situationFilter','change',function(e){state.situacao=e.target.value;renderizarAcompanhamento();}],['deadlineFilter','change',function(e){state.prazo=e.target.value;renderizarAcompanhamento();}],['professionalFilter','change',function(e){state.profissional=e.target.value;carregarDados(false);}],['periodFilter','change',function(e){state.periodo=e.target.value;carregarDados(false);}],['rankingSort','change',function(e){state.ranking=e.target.value;renderizarProdutividade();}]];
+  const eventos=[['refreshButton','click',function(){carregarDados(true);}],['searchInput','input',function(e){state.busca=e.target.value;renderizarAcompanhamento();}],['situationFilter','change',function(e){state.situacao=e.target.value;renderizarAcompanhamento();}],['deadlineFilter','change',function(e){state.prazo=e.target.value;renderizarAcompanhamento();}],['professionalFilter','change',function(e){state.profissional=e.target.value;carregarDados(false);}],['periodFilter','change',function(e){state.periodo=e.target.value;carregarDados(false);}],['rankingSort','change',function(e){state.ranking=e.target.value;renderizarProdutividade();}],['rankingMetric','change',function(e){state.rankingMetric=e.target.value;renderizarComparativos();}]];
   eventos.forEach(function(item){const node=el(item[0]);if(node)node.addEventListener(item[1],item[2]);}); carregarDados(false);
   document.addEventListener('click',function(evento){
     if (!(evento.target.closest && evento.target.closest('.themed-select'))) fecharMenusTematizados(false);
