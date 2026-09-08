@@ -91,6 +91,13 @@ node dashboard-analytics/tests/sheets.test.js
 node dashboard-analytics/tests/frontend.test.js
 ```
 
+## Controle de versão
+
+- Repositório: `git@github.com:fitmanagementels/PRESCRI-O_CB.git`
+- Branch principal: `main`
+- Último envio: commit `8665009` — `feat: versionar questionário e corrigir migração`.
+- Arquivos de vínculo local com Apps Script (`.clasp.json`) e artefatos gerados de preview permanecem fora do controle de versão quando não já rastreados pelo histórico.
+
 ## Próximas ações obrigatórias no Google Apps Script
 
 1. No projeto Apps Script do PWA operacional, substituir/atualizar **`Código.gs` e `Questionario.gs`** com a versão local atual e salvar.
