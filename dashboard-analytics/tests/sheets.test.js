@@ -57,6 +57,12 @@ const respostasPwa = sheet('Respostas', [
 const lidaPwa = context.lerRespostasAnalytics_(respostasPwa);
 assert.strictEqual(lidaPwa[0].submissionId, 'DEM-20260720-abc');
 assert.strictEqual(lidaPwa[0].dataEntrada, '2026-07-20');
+
+const respostasPauloVictor = sheet('Respostas', [
+  ['ID da demanda', 'Criado em', 'Profissional', 'Nome completo'],
+  ['DEM-PAULO-001', new Date(2026, 6, 20), 'Paulo Victor', 'Pessoa Beta'],
+]);
+assert.strictEqual(context.lerRespostasAnalytics_(respostasPauloVictor)[0].profissional, 'Paulo Vitor');
 const monitoramentoPwa = sheet('Monitoramento', [
   ['ID da demanda', 'Data da anamnese', 'Aluno', 'Profissional', 'Anamnese transferida?', 'Treino prescrito?', 'Data da prescrição'],
   ['DEM-20260720-abc', new Date(2026, 6, 20), 'Pessoa Beta', 'Profissional A', true, false, ''],

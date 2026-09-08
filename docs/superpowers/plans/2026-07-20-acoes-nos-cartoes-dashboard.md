@@ -38,7 +38,7 @@ assert(!index.includes('id="anamnesisDelete"'));
 
 - [x] **Step 2: Executar o teste vermelho**
 
-Run: `node dashboard-analytics/tests/frontend.test.js`
+Run: `node dashboard-analytics/tests/frontend.test.js`  
 Expected: falha porque os controles ainda estão no modal e o cartão ainda abre a anamnese.
 
 - [x] **Step 3: Implementar o contrato mínimo**
@@ -49,7 +49,7 @@ return '<article class="demand-card">...<button data-open-anamnesis="' + id + '"
 
 - [x] **Step 4: Executar o teste verde**
 
-Run: `node dashboard-analytics/tests/frontend.test.js`
+Run: `node dashboard-analytics/tests/frontend.test.js`  
 Expected: `Frontend analytics aprovado.`
 
 ### Task 2: Eventos e layout responsivo
@@ -96,7 +96,7 @@ function excluirDemandaAtual(submissionId) {
 
 - [x] **Step 5: Verificar em desktop e celular**
 
-Run: `node dashboard-analytics/scripts/build-preview.js && node dashboard-analytics/tests/frontend.test.js && node tests/responsive.test.js`
+Run: `node dashboard-analytics/scripts/build-preview.js && node dashboard-analytics/tests/frontend.test.js && node tests/responsive.test.js`  
 Expected: testes aprovados, sem área de toque menor que 44 px.
 
 ### Task 3: Documentação e regressão
@@ -112,5 +112,5 @@ O modal é leitura; WhatsApp, exclusão e abertura ficam no cartão da demanda.
 
 - [x] **Step 2: Executar suíte completa**
 
-Run: `node scripts/build-preview.js && node dashboard-analytics/scripts/build-preview.js && node tests/backend.test.js && node tests/frontend.test.js && node dashboard-analytics/tests/backend.test.js && node dashboard-analytics/tests/sheets.test.js && node dashboard-analytics/tests/frontend.test.js`
+Run: `node scripts/build-preview.js && node dashboard-analytics/scripts/build-preview.js && node tests/backend.test.js && node tests/frontend.test.js && node dashboard-analytics/tests/backend.test.js && node dashboard-analytics/tests/sheets.test.js && node dashboard-analytics/tests/frontend.test.js`  
 Expected: todos os comandos terminam sem falhas.

@@ -21,6 +21,7 @@ assert.strictEqual(typeof context.excluirDemandaAnalytics, 'function', 'A exclus
 assert.strictEqual(context.normalizarBooleanoAnalytics_('SIM'), true);
 assert.strictEqual(context.normalizarBooleanoAnalytics_('não'), false);
 assert.strictEqual(context.normalizarDataAnalytics_('13/07/2026 10:00'), '2026-07-13');
+assert.strictEqual(context.normalizarNomeProfissionalAnalytics_('Paulo Victor'), 'Paulo Vitor');
 assert.strictEqual(context.calcularDiasCivisAnalytics_('2026-07-01', '2026-07-03'), 2);
 
 const respostas = [
@@ -33,6 +34,9 @@ assert.strictEqual(fatos.length, 2);
 assert.strictEqual(fatos[0].status, 'nao_transferida');
 assert.strictEqual(fatos[0].sla, 'atrasada');
 assert.strictEqual(fatos[1].status, 'pendente');
+assert.strictEqual(context.juntarFontesAnalytics_([
+  { submissionId: 'SYN-PAULO', aluno: 'Pessoa Paulo', profissional: 'Paulo Victor', dataEntrada: '2026-07-01' },
+], [], new Date(2026, 6, 4))[0].profissional, 'Paulo Vitor');
 const fatoPrivado = context.juntarFontesAnalytics_([
   { submissionId: 'SYN-PRIV', aluno: 'Pessoa Privada', profissional: 'Profissional A', dataEntrada: '2026-07-01', whatsapp: '5585999990000' },
 ], [], new Date(2026, 6, 4))[0];

@@ -84,7 +84,19 @@ assert(
   'wizard-review-step',
   'custom-select-trigger',
   'tratarTecladoSelectCustom',
+  "versao: 'v3'",
+  "['Nunca treinei', 'Menos de 3 meses', '3 a 12 meses', '1 a 3 anos', 'Mais de 3 anos']",
+  "['Não', 'Sim']",
+  "['Nenhum', 'Agachar', 'Correr', 'Subir escada'",
+  'data-outro-campo',
+  'normalizarOutroDemanda',
+  'tratarExclusividadeNenhumDemanda',
 ].forEach((texto) => assert(scriptsHtml.includes(texto), `scripts.html deve conter: ${texto}`));
+
+assert(
+  scriptsHtml.includes("const DEMAND_DRAFT_KEY = 'prescricoes_anamnese_v3_rascunho'"),
+  'O rascunho da nova anamnese deve ser isolado pela versão v3.'
+);
 
 assert(
   !scriptsHtml.includes("<select id=\"' + id + '\" name=\"' + chave"),
@@ -93,6 +105,24 @@ assert(
 assert(
   scriptsHtml.includes("if (nomeFuncao === 'getQuestionarioPwaPrescricao')"),
   'A prévia local deve carregar o questionário da anamnese.'
+);
+const blocoCarregamentoQuestionario = scriptsHtml.match(
+  /function carregarQuestionarioDemanda\(\)[\s\S]*?\n\s*function criarRascunhoDemanda/
+);
+assert(blocoCarregamentoQuestionario, 'O carregamento da anamnese deve existir.');
+assert(
+  !blocoCarregamentoQuestionario[0].includes('if (state.questionario)'),
+  'Ao abrir Adicionar demanda, o PWA deve consultar novamente a versão ativa do questionário.'
+);
+const blocoCamposEtapa = scriptsHtml.match(
+  /function camposDaEtapaDemanda\(etapa\)[\s\S]*?\n\s*function renderizarWizardDemanda/
+);
+assert(blocoCamposEtapa, 'A seleção dos campos por etapa deve existir.');
+assert(
+  blocoCamposEtapa[0].includes('.sort(function')
+    && blocoCamposEtapa[0].includes('campos[chaveA].ordem')
+    && blocoCamposEtapa[0].includes('campos[chaveB].ordem'),
+  'Os campos de cada etapa devem ser ordenados pelo número explícito recebido do catálogo.'
 );
 assert(
   scriptsHtml.includes("if (nomeFuncao === 'enviarDemandaPwaPrescricao')"),
@@ -122,6 +152,12 @@ assert(styles.includes('@media (min-width: 680px)'), 'O layout deve possuir adap
 assert(styles.includes('.student-card'), 'Os cards de alunos devem estar estilizados.');
 assert(styles.includes('.demand-wizard'), 'O wizard de nova demanda deve estar estilizado.');
 assert(styles.includes('.custom-select-menu'), 'O menu personalizado deve receber o tema do app.');
+assert(styles.includes('.wizard-other'), 'O complemento da opção Outro deve receber estilos próprios.');
+assert(
+  styles.includes('.wizard-choice:has(input:checked)')
+    && styles.includes('.wizard-consent:has(input:checked)'),
+  'Escolhas marcadas devem possuir estado visual explícito.'
+);
 assert(styles.includes('.boot-logo'), 'A tela inicial deve exibir a logo da empresa.');
 assert(styles.includes('.brand-logo'), 'O cabeçalho deve exibir a logo da empresa.');
 assert(styles.includes('.prescription-modal'), 'O pop-up de informações deve estar estilizado.');

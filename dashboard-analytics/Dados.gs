@@ -6,6 +6,11 @@ function limparTextoAnalytics_(valor) {
   return String(valor == null ? '' : valor).trim();
 }
 
+function normalizarNomeProfissionalAnalytics_(valor) {
+  const nome = limparTextoAnalytics_(valor);
+  return normalizarCabecalhoAnalytics_(nome) === 'paulo victor' ? 'Paulo Vitor' : nome;
+}
+
 function linkWhatsappAnalytics_(valor) {
   let numero = limparTextoAnalytics_(valor).replace(/\D/g, '');
   if (numero.indexOf('00') === 0) numero = numero.slice(2);
@@ -76,7 +81,7 @@ function juntarFontesAnalytics_(respostas, monitoramento, hoje) {
     const fato = {
       submissionId: limparTextoAnalytics_(resposta.submissionId),
       aluno: limparTextoAnalytics_(resposta.aluno),
-      profissional: limparTextoAnalytics_(resposta.profissional) || 'Não informado',
+      profissional: normalizarNomeProfissionalAnalytics_(resposta.profissional) || 'Não informado',
       dataEntrada: normalizarDataAnalytics_(resposta.dataEntrada),
       whatsappLink: linkWhatsappAnalytics_(resposta.whatsapp),
       transferida: normalizarBooleanoAnalytics_(acompanhamento.transferida),
@@ -149,7 +154,7 @@ function lerRespostasAnalytics_(aba) {
     return {
       submissionId: limparTextoAnalytics_(exibida[i.submissionId]),
       dataEntrada: normalizarDataAnalytics_(linha[i.dataEntrada] || exibida[i.dataEntrada]),
-      profissional: limparTextoAnalytics_(exibida[i.profissional]),
+      profissional: normalizarNomeProfissionalAnalytics_(exibida[i.profissional]),
       aluno: limparTextoAnalytics_(exibida[i.aluno]),
       whatsapp: i.whatsapp >= 0 ? limparTextoAnalytics_(exibida[i.whatsapp]) : '',
     };
@@ -227,7 +232,7 @@ function montarAnamneseDashboardAnalytics_(cabecalhos, valores, exibidos) {
   return {
     submissionId: limparTextoAnalytics_(exibidos[indices.submissionId]),
     aluno: limparTextoAnalytics_(exibidos[indices.aluno]),
-    profissional: limparTextoAnalytics_(exibidos[indices.profissional]) || 'Não informado',
+    profissional: normalizarNomeProfissionalAnalytics_(exibidos[indices.profissional]) || 'Não informado',
     whatsapp: indices.whatsapp >= 0 ? limparTextoAnalytics_(exibidos[indices.whatsapp]) : '',
     dataResposta: normalizarDataAnalytics_(valores[indices.dataEntrada] || exibidos[indices.dataEntrada]),
     respostas: respostas,

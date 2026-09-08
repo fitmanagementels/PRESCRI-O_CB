@@ -1,0 +1,15 @@
+**/*
+!appsscript.json
+!Cache.gs
+!Código.gs
+!Config.gs
+!Dados.gs
+!Exclusoes.gs
+!Historico.gs
+!Metricas.gs
+!Questionario.gs
+!charts.html
+!index.html
+!preview.html
+!scripts.html
+!styles.html

@@ -73,9 +73,44 @@ function campoQuestionario_(cabecalho, rotulo, tipo, etapa, obrigatorio, opcoes)
   });
 }
 
+const PRESCRICAO_VERSAO_PRINCIPAL = 'v3';
+
 const PRESCRICAO_QUESTIONARIOS = Object.freeze({
   v2: Object.freeze({
     versao: 'v2',
+    campos: Object.freeze({
+      consentimento: campoQuestionario_('Consentimento', 'Confirmo que minhas respostas serão usadas para avaliar meu perfil e montar uma prescrição de treino personalizada.', 'consentimento', 1),
+      profissional: campoQuestionario_('Profissional', 'Nome do profissional', 'profissional', 1),
+      nomeCompleto: campoQuestionario_('Nome completo', 'Nome completo', 'texto', 2),
+      email: campoQuestionario_('Email', 'E-mail', 'email', 2),
+      whatsapp: campoQuestionario_('Whatsapp', 'WhatsApp', 'tel', 2),
+      dataNascimento: campoQuestionario_('Data de nascimento', 'Data de nascimento', 'data', 2),
+      alturaCm: campoQuestionario_('Altura em centímetros', 'Altura em centímetros', 'numero', 2),
+      pesoKg: campoQuestionario_('Peso em kg', 'Peso em kg', 'numero', 2),
+      experienciaMusculacao: campoQuestionario_('Experiência com musculação', 'Qual é sua experiência com musculação?', 'unica', 3, true, ['Nunca treinei', 'Menos de 3 meses', '3 a 12 meses', '1 a 3 anos', 'Mais de 3 anos']),
+      frequenciaUltimos3Meses: campoQuestionario_('Frequência de musculação nos últimos 3 meses', 'Nos últimos 3 meses, quantas vezes por semana você treinou musculação em média?', 'unica', 3, true, ['Não treinei', '1x por semana', '2x por semana', '3x por semana', '4x ou mais']),
+      objetivo: campoQuestionario_('Objetivo principal', 'Qual seu objetivo principal agora?', 'unica', 4, true, ['Ganhar massa', 'Emagrecer', 'Força', 'Saúde', 'Estética', 'Performance', 'Voltar a treinar', 'Outro']),
+      frequenciaPretendida: campoQuestionario_('Frequência pretendida (dias/semana)', 'Quantas vezes na semana pretende treinar?', 'select', 4, true, ['1', '2', '3', '4', '5', '6', '7']),
+      tempoTreino: campoQuestionario_('Tempo disponível por treino', 'Quanto tempo você tem por treino?', 'unica', 4, true, ['40 min', '60 min', '75 min', 'Outro']),
+      atividadesExtras: campoQuestionario_('Atividades além da musculação', 'Além da musculação, você faz corrida, cardio, esporte ou aula?', 'texto_longo', 4),
+      dorAtual: campoQuestionario_('Dor ou desconforto atual', 'Você sente alguma dor ou desconforto hoje que possa interferir no treino?', 'unica', 5, true, ['Não', 'Sim']),
+      localDor: campoQuestionario_('Local da dor ou desconforto', 'Onde é a dor ou desconforto?', 'texto', 5, false),
+      intensidadeDor: campoQuestionario_('Intensidade da dor (0 a 10)', 'Intensidade da dor de 0 a 10', 'numero', 5, false),
+      movimentosPioramDor: campoQuestionario_('Movimentos que pioram a dor', 'Quais movimentos pioram essa dor ou desconforto?', 'texto_longo', 5, false),
+      assimetria: campoQuestionario_('Diferença entre lados do corpo', 'Você percebe diferença entre o lado direito e esquerdo do corpo?', 'unica', 5, true, ['Não percebo diferença', 'Sim', 'Não sei dizer']),
+      detalhesAssimetria: campoQuestionario_('Detalhes da assimetria', 'Se marcou sim, qual lado, qual região e qual diferença sente?', 'texto', 5, false),
+      movimentosIncomodam: campoQuestionario_('Movimentos que incomodam', 'Algum movimento costuma incomodar?', 'multipla', 5, true, ['Nenhum', 'Agachar', 'Correr', 'Subir escada', 'Empurrar', 'Puxar', 'Levantar peso do chão', 'Elevar o braço acima da cabeça', 'Outro']),
+      exerciciosEvitados: campoQuestionario_('Exercícios evitados ou inseguros', 'Existe algum exercício que você não pode fazer, não gosta ou não se sente seguro fazendo?', 'texto_longo', 5),
+      historicoLesoes: campoQuestionario_('Histórico de lesões ou cirurgias', 'Já teve lesão, cirurgia, hérnia, tendinite, luxação, fratura ou problema de coluna?', 'texto_longo', 6),
+      condicaoImportante: campoQuestionario_('Doença ou condição importante', 'Tem alguma doença ou condição importante?', 'texto', 6),
+      medicamentoContinuo: campoQuestionario_('Medicamento contínuo', 'Usa algum medicamento contínuo?', 'texto', 6),
+      sintomasEsforco: campoQuestionario_('Sintomas durante esforço', 'Já sentiu dor no peito, desmaio, tontura forte, falta de ar fora do normal ou palpitação durante esforço?', 'unica', 6, true, ['Não', 'Sim']),
+      preferenciaTreino: campoQuestionario_('Preferência de treino', 'Que tipo de treino você prefere?', 'unica', 6, true, ['Curto e direto', 'Mais variado', 'Mais pesado', 'Mais guiado', 'Com máquinas', 'Com pesos livres', 'Sem preferência']),
+      observacoes: campoQuestionario_('Observações finais', 'Tem algo importante sobre seu corpo, rotina ou treino que eu não perguntei?', 'texto_longo', 6),
+    }),
+  }),
+  v3: Object.freeze({
+    versao: 'v3',
     campos: Object.freeze({
       consentimento: campoQuestionario_('Consentimento', 'Confirmo que minhas respostas serão usadas para avaliar meu perfil e montar uma prescrição de treino personalizada.', 'consentimento', 1),
       profissional: campoQuestionario_('Profissional', 'Nome do profissional', 'profissional', 1),
@@ -114,6 +149,7 @@ function onOpen() {
     .createMenu('Prescrições')
     .addItem('Sincronizar Monitoramento', 'sincronizarMonitoramento')
     .addItem('Preparar base versionada', 'prepararBaseAnamneseVersionadaPrescricao')
+    .addItem('Preparar e ativar anamnese v3', 'prepararEAtivarQuestionarioV3Prescricao')
     .addItem('Validar base versionada', 'validarBaseAnamneseVersionadaPrescricao')
     .addItem('Validar backend', 'validarBackendPrescricoes')
     .addToUi();
@@ -167,8 +203,26 @@ function getProfissionaisAtivosPrescricao() {
     return limparTextoPrescricao_(linha[nome])
       && normalizarCabecalhoPrescricao_(linha[status]) === 'ativo';
   }).map(function (linha) {
-    return limparTextoPrescricao_(linha[nome]);
+    return normalizarNomeProfissionalPrescricao_(linha[nome]);
+  }).filter(Boolean).filter(function (nome, indice, lista) {
+    return lista.indexOf(nome) === indice;
   }).sort(compararTextoPrescricao_);
+}
+
+function normalizarOpcaoOutroPrescricao_(campo, valor) {
+  const texto = limparTextoPrescricao_(valor);
+  const opcoes = campo && Array.isArray(campo.opcoes) ? campo.opcoes : [];
+  if (texto === 'Outro' && opcoes.indexOf('Outro') !== -1) {
+    throw new Error('Explique a opção Outro em: ' + campo.rotulo);
+  }
+  if (opcoes.indexOf('Outro') !== -1 && /^Outro:\s*\S/i.test(texto)) {
+    return 'Outro: ' + texto.replace(/^Outro:\s*/i, '').trim();
+  }
+  if (/^Outro:/i.test(texto)) {
+    throw new Error('Explique a opção Outro em: ' + campo.rotulo);
+  }
+  if (opcoes.indexOf(texto) !== -1) return texto;
+  throw new Error('Selecione uma opção válida em: ' + campo.rotulo);
 }
 
 function validarDemandaPwaPrescricao_(formulario) {
@@ -198,17 +252,35 @@ function validarDemandaPwaPrescricao_(formulario) {
     respostas[chave] = Array.isArray(valor)
       ? valor.map(limparTextoPrescricao_).filter(Boolean)
       : (campo.tipo === 'consentimento' ? normalizarBooleanoPrescricao_(valor) : limparTextoPrescricao_(valor));
+    if (campo.codigo === 'profissional') {
+      respostas[chave] = normalizarNomeProfissionalPrescricao_(respostas[chave]);
+    }
     if (campo.obrigatorio && (!respostas[chave] || (Array.isArray(respostas[chave]) && !respostas[chave].length))) {
       throw new Error('Preencha o campo obrigatório: ' + campo.rotulo);
     }
     if ((campo.tipo === 'unica' || campo.tipo === 'multipla' || campo.tipo === 'select') && respostas[chave]) {
       const selecionadas = Array.isArray(respostas[chave]) ? respostas[chave] : [respostas[chave]];
-      if (selecionadas.some(function (opcao) { return campo.opcoes.indexOf(opcao) === -1; })) {
-        throw new Error('Selecione uma opção válida em: ' + campo.rotulo);
+      const normalizadas = selecionadas.map(function (opcao) {
+        return normalizarOpcaoOutroPrescricao_(campo, opcao);
+      });
+      if (new Set(normalizadas).size !== normalizadas.length) {
+        throw new Error('Não repita opções em: ' + campo.rotulo);
       }
+      if (campo.tipo === 'multipla' && normalizadas.indexOf('Nenhum') !== -1 && normalizadas.length > 1) {
+        throw new Error('Nenhum não pode ser combinado com outras opções em: ' + campo.rotulo);
+      }
+      respostas[chave] = Array.isArray(respostas[chave]) ? normalizadas : normalizadas[0];
     }
     if (campo.tipo === 'numero' && respostas[chave] && !/^[-+]?\d+(?:[.,]\d+)?$/.test(respostas[chave])) {
       throw new Error('Informe um número válido em: ' + campo.rotulo);
+    }
+    if (campo.codigo === 'intensidadeDor' && respostas[chave]
+      && (!/^\d+$/.test(respostas[chave]) || Number(respostas[chave]) < 0 || Number(respostas[chave]) > 10)) {
+      throw new Error('Intensidade da dor deve ser um número inteiro entre 0 e 10.');
+    }
+    if ((campo.codigo === 'alturaCm' || campo.codigo === 'pesoKg') && respostas[chave]
+      && Number(String(respostas[chave]).replace(',', '.')) <= 0) {
+      throw new Error((campo.codigo === 'alturaCm' ? 'Altura' : 'Peso') + ' deve ser maior que zero.');
     }
     if (campo.tipo === 'email' && respostas[chave] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(respostas[chave])) {
       throw new Error('Informe um e-mail válido.');
@@ -341,7 +413,7 @@ function mapearLinhaLegadaTallyPrescricao_(cabecalhos, linha) {
     'Criado em': valor(['Submitted at', 'Criado em']),
     'Versão do questionário': 'v1',
     'ID da tentativa': '',
-    'Profissional': valor(['Nome do Profissional', 'Profissional']),
+    'Profissional': normalizarNomeProfissionalPrescricao_(valor(['Nome do Profissional', 'Profissional'])),
     'Nome completo': valor(['Nome completo']),
     'Email': valor(['Email', 'E-mail']),
     'Whatsapp': valor(['Whatsapp', 'WhatsApp']),
@@ -469,9 +541,12 @@ function linhasCatalogoQuestionarioPrescricao_() {
   perguntasLegadas.forEach(function (pergunta, indice) {
     linhas.push(['v1', indice + 1, 'v1_' + (indice + 1), pergunta, 'legado', true, '', 'Arquivado']);
   });
-  Object.keys(PRESCRICAO_QUESTIONARIOS.v2.campos).forEach(function (chave, indice) {
-    const campo = PRESCRICAO_QUESTIONARIOS.v2.campos[chave];
-    linhas.push(['v2', indice + 1, chave, campo.rotulo, campo.tipo, campo.obrigatorio, campo.opcoes.join(' | '), 'Ativa']);
+  ['v2', 'v3'].forEach(function (versao) {
+    Object.keys(PRESCRICAO_QUESTIONARIOS[versao].campos).forEach(function (chave, indice) {
+      const campo = PRESCRICAO_QUESTIONARIOS[versao].campos[chave];
+      const status = versao === 'v2' ? 'Ativa' : 'Rascunho';
+      linhas.push([versao, indice + 1, chave, campo.rotulo, campo.tipo, campo.obrigatorio, campo.opcoes.join(' | '), status]);
+    });
   });
   return linhas;
 }
@@ -561,6 +636,7 @@ function prepararBaseAnamneseVersionadaPrescricao() {
 function validarBaseAnamneseVersionadaPrescricao() {
   const planilha = obterPlanilhaPrescricao_();
   const pendencias = [];
+  let versaoAtiva = '';
   const abaRespostas = planilha.getSheetByName(PRESCRICAO_CONFIG.abaRespostas);
   if (!abaRespostas) {
     pendencias.push('Aba Respostas não encontrada.');
@@ -594,12 +670,22 @@ function validarBaseAnamneseVersionadaPrescricao() {
   const abaQuestionario = planilha.getSheetByName(PRESCRICAO_CONFIG.abaQuestionario);
   if (!abaQuestionario) {
     pendencias.push('Aba Questionário não encontrada.');
+  } else {
+    const ativas = lerVersoesQuestionarioPrescricao_(planilha).filter(function (item) {
+      return item.status === 'Ativa';
+    });
+    if (ativas.length !== 1) {
+      pendencias.push('Questionário deve possuir exatamente uma versão ativa; encontradas: ' + ativas.length + '.');
+    } else {
+      versaoAtiva = ativas[0].versao;
+    }
   }
   return {
     ok: !pendencias.length,
     pendencias: pendencias,
     spreadsheetId: PRESCRICAO_CONFIG.spreadsheetId,
-    versoesSuportadas: ['v1', 'v2'],
+    versoesSuportadas: ['v1', 'v2', 'v3'],
+    versaoAtiva: versaoAtiva,
   };
 }
 
@@ -1014,7 +1100,7 @@ function lerRespostasPrescricao_(aba) {
     const registro = {
       submissionId: id,
       submittedAt: normalizarDataPlanilhaPrescricao_(linha[indices.submittedAt]),
-      profissional: limparTextoPrescricao_(linha[indices.profissional]),
+      profissional: normalizarNomeProfissionalPrescricao_(linha[indices.profissional]),
       aluno: limparTextoPrescricao_(linha[indices.aluno]),
       numeroLinha: indice + 2,
       linha: linha,
@@ -1057,7 +1143,7 @@ function lerMonitoramentoPrescricao_(aba) {
       submissionId: id,
       dataAnamnese: normalizarDataPlanilhaPrescricao_(linha[1]),
       aluno: limparTextoPrescricao_(linha[2]),
-      profissional: limparTextoPrescricao_(linha[3]),
+      profissional: normalizarNomeProfissionalPrescricao_(linha[3]),
       anamneseTransferida: normalizarBooleanoPrescricao_(linha[4]),
       treinoPrescrito: normalizarBooleanoPrescricao_(linha[5]),
       dataPrescricao: normalizarDataPlanilhaPrescricao_(linha[6]),
@@ -1250,6 +1336,11 @@ function normalizarCabecalhoPrescricao_(valor) {
 
 function limparTextoPrescricao_(valor) {
   return valor === null || valor === undefined ? '' : String(valor).trim();
+}
+
+function normalizarNomeProfissionalPrescricao_(valor) {
+  const nome = limparTextoPrescricao_(valor);
+  return normalizarCabecalhoPrescricao_(nome) === 'paulo victor' ? 'Paulo Vitor' : nome;
 }
 
 function normalizarBooleanoPrescricao_(valor) {

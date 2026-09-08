@@ -33,7 +33,7 @@ function garantirHistoricoAnalytics_(planilha) {
 }
 
 function chaveSnapshotAnalytics_(data, profissional) {
-  return normalizarDataAnalytics_(data) + '|' + limparTextoAnalytics_(profissional);
+  return normalizarDataAnalytics_(data) + '|' + normalizarNomeProfissionalAnalytics_(profissional);
 }
 
 function montarSnapshotsAnalytics_(fatos, dataSnapshot) {
@@ -86,7 +86,7 @@ function lerHistoricoAnalytics_(aba) {
   if (!aba || aba.getLastRow() < 2) return [];
   return aba.getRange(2, 1, aba.getLastRow() - 1, HISTORICO_ANALYTICS_HEADERS.length).getValues().map(function (linha) {
     return {
-      data: normalizarDataAnalytics_(linha[0]), profissional: limparTextoAnalytics_(linha[1]),
+      data: normalizarDataAnalytics_(linha[0]), profissional: normalizarNomeProfissionalAnalytics_(linha[1]),
       recebidas: Number(linha[2] || 0), concluidas: Number(linha[3] || 0),
       naoTransferidas: Number(linha[4] || 0), pendentes: Number(linha[5] || 0),
       backlog: Number(linha[6] || 0), atrasadas: Number(linha[7] || 0),

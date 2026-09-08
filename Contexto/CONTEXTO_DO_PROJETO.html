@@ -3,167 +3,98 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Contexto do projeto — Prescrições CB</title>
+  <title>Contexto — Prescrições CB</title>
   <style>
-    :root { color-scheme: dark; --bg:#05070d; --panel:#0d1220; --text:#f7f8fb; --muted:#aab3c4; --accent:#cfff00; --question:#a9bd49; --line:#283142; --warn:#ffd166; }
-    * { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; }
-    main { width:min(1060px,calc(100% - 32px)); margin:32px auto 56px; } h1 { margin:0 0 6px; font-size:clamp(1.8rem,5vw,2.6rem); } h2 { font-size:1.05rem; margin:18px 0 8px; }
-    .meta,.muted { color:var(--muted); } .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:24px 0; }
-    .card,details { border:1px solid var(--line); border-radius:12px; background:var(--panel); padding:16px; } .card strong { display:block; color:var(--accent); margin-bottom:5px; }
-    details { margin:12px 0; } summary { cursor:pointer; color:var(--accent); font-weight:850; } ul,ol { padding-left:22px; } table { width:100%; border-collapse:collapse; margin-top:12px; font-size:.94rem; }
-    th,td { padding:9px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; } code { color:#dbe88d; } pre { overflow:auto; padding:16px; border-radius:8px; background:#070a11; white-space:pre-wrap; }
-    .warning { color:var(--warn); font-weight:700; } @media (max-width:640px) { main { width:min(100% - 24px,1060px); margin-top:20px; } table { font-size:.84rem; } th,td { padding:7px; } }
+    :root { color-scheme: dark; --bg:#070b13; --panel:#101827; --line:#2a3b55; --text:#f7f9fc; --muted:#a8b7ce; --accent:#d4ff24; }
+    * { box-sizing:border-box; }
+    body { margin:0; font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+    main { width:min(980px,calc(100% - 32px)); margin:32px auto 56px; }
+    h1,h2,h3 { line-height:1.2; } h1 { margin-bottom:4px; } h2 { margin:0; font-size:1.1rem; } h3 { margin:20px 0 6px; font-size:1rem; color:var(--accent); }
+    .meta,p,li { color:var(--muted); } .lead { color:var(--text); font-size:1.05rem; }
+    details { margin:14px 0; border:1px solid var(--line); border-radius:12px; background:var(--panel); overflow:hidden; }
+    summary { padding:16px 18px; cursor:pointer; font-weight:700; color:var(--text); }
+    section { padding:0 18px 18px; } code { color:var(--accent); overflow-wrap:anywhere; } pre { padding:14px; overflow:auto; background:#060a10; border:1px solid var(--line); border-radius:8px; }
+    a { color:var(--accent); } strong { color:var(--text); }
   </style>
 </head>
 <body>
   <main>
-    <header>
-      <h1>Contexto do projeto — Prescrições CB</h1>
-      <div class="meta">Última atualização: 2026-07-20 14:20 -0300</div>
-    </header>
-
-    <section class="grid" aria-label="Resumo rápido">
-      <div class="card"><strong>Objetivo</strong>Trocar o Tally por anamnese direta no PWA, preservando todo o histórico.</div>
-      <div class="card"><strong>Base oficial</strong><code>BASE_PRESCRIÇÃO_CB — PWA</code>, versão de dados v1/v2.</div>
-      <div class="card"><strong>Onde parei</strong>Código e testes locais prontos; publicação/aceite no Apps Script a confirmar.</div>
-      <div class="card"><strong>Próxima ação</strong>Sincronizar os arquivos, testar <code>/dev</code> e publicar nova versão.</div>
-    </section>
+    <h1>Contexto do Projeto — Prescrições CB</h1>
+    <p class="meta">Última atualização: 2026-09-08 15:15 -0300 · Status: implementação local validada; migração do catálogo ainda precisa ser executada na planilha.</p>
+    <p class="lead">Dois PWAs Google Apps Script usam a planilha oficial <code>1qyk_MfgfAP6-n_FlzVaHGcM9o2sIH6WVTv91TExkJNs</code>: o operacional dos prescritores e o <code>dashboard-analytics</code> da gestão.</p>
 
     <details open>
-      <summary>Resumo executivo</summary>
-      <ul>
-        <li>Há dois projetos Apps Script: PWA operacional na raiz e dashboard independente em <code>dashboard-analytics/</code>.</li>
-        <li>A base oficial é <code>1qyk_MfgfAP6-n_FlzVaHGcM9o2sIH6WVTv91TExkJNs</code>, no fuso <code>America/Fortaleza</code>.</li>
-        <li>O legado Tally foi preservado como <code>v1</code>; novas anamneses entram em <code>Respostas</code> como <code>v2</code>.</li>
-        <li>O PWA tem rascunho local por seis horas, envio idempotente e wizard mobile-first de sete telas.</li>
-        <li>O dashboard lê dados operacionais, grava agregados em <code>Analytics_Historico</code> e, sob confirmação forte, pode excluir uma demanda pelo ID.</li>
-      </ul>
-    </details>
-
-    <details>
-      <summary>Objetivos e critérios de sucesso</summary>
-      <p>Prescritores devem conseguir preencher e retomar anamneses em celular sem depender do Tally. Cada envio válido deve criar uma única demanda rastreável e seu monitoramento correspondente. Mudanças futuras de questionário não podem apagar ou reinterpretar dados históricos.</p>
-      <p>O acesso do PWA é para qualquer pessoa conectada a uma Conta Google; o profissional é selecionado dentre as linhas <code>Ativo</code> da aba <code>Complementar</code>.</p>
+      <summary>Resumo executivo e objetivo</summary>
+      <section>
+        <p>O formulário é versionado: há sempre uma única versão ativa. A gestão cria um rascunho local, revisa etapas e perguntas, salva ou publica quando estiver pronto. O PWA operacional consome apenas a versão publicada.</p>
+        <p>Não há condicionais nem arrastar e soltar. Profissional, nome completo e WhatsApp são campos protegidos; WhatsApp é obrigatório e somente pode abrir conversa por link, sem envio automático.</p>
+      </section>
     </details>
 
     <details open>
-      <summary>Arquitetura, planilha e versões</summary>
-      <table><thead><tr><th>Aba</th><th>Papel</th><th>Regra</th></tr></thead><tbody>
-        <tr><td><code>Respostas</code></td><td>Fonte canônica, uma linha por demanda.</td><td>Não apagar/renomear colunas históricas.</td></tr>
-        <tr><td><code>Respostas – legado Tally</code></td><td>Exportação original.</td><td>Somente histórico.</td></tr>
-        <tr><td><code>Questionário</code></td><td>Catálogo de versões, perguntas e opções.</td><td>Mudança semântica relevante cria v3/v4.</td></tr>
-        <tr><td><code>Monitoramento</code></td><td>Transferência, prescrição e datas.</td><td>Ligação por <code>ID da demanda</code>.</td></tr>
-        <tr><td><code>Complementar</code></td><td>Profissionais disponíveis.</td><td>Exibir apenas <code>Status = Ativo</code>.</td></tr>
-        <tr><td><code>Analytics_Historico</code></td><td>Snapshots agregados do dashboard.</td><td>Sem respostas clínicas individuais.</td></tr>
-        <tr><td><code>Analytics_Exclusoes</code></td><td>Auditoria de exclusões no dashboard.</td><td>Somente ID, data/hora, motivo e origem.</td></tr>
-      </tbody></table>
-      <p>Legado: <code>Origem=Tally</code>, <code>Versão=v1</code> e ID original. Novo PWA: <code>Origem=PWA</code>, <code>Versão=v2</code>, ID <code>DEM-...</code> e <code>ID da tentativa</code> para idempotência.</p>
-    </details>
-
-    <details open>
-      <summary>Fluxo atual da anamnese v2</summary>
-      <ol>
-        <li>Consentimento e responsável.</li>
-        <li>Identificação e dados físicos: nome, e-mail, WhatsApp, nascimento, altura e peso.</li>
-        <li>Experiência de treino.</li>
-        <li>Objetivo e rotina: inclui dias pretendidos por semana de 1 a 7.</li>
-        <li>Dor, assimetrias e limitações.</li>
-        <li>Saúde e preferências.</li>
-        <li>Revisar e enviar: somente resumo, retorno e envio.</li>
-      </ol>
-      <p>O seletor de dias é próprio do tema escuro, com <code>combobox/listbox</code>, toque e teclado. Não usar o popup de <code>&lt;select&gt;</code> nativo. Rascunhos ficam no navegador por 6 horas e não geram linha parcial na planilha.</p>
+      <summary>Estado atual e correção recente</summary>
+      <section>
+        <ul>
+          <li>O dashboard possui a aba <strong>Questionário</strong> com edição em rascunho, etapas, perguntas, mudança explícita de etapa, salvar e publicar com bloqueio contra duplo clique.</li>
+          <li>O catálogo da planilha ainda precisa receber os metadados I:S. O erro de “campos ausentes” ocorreu porque a aba <code>Questionário</code> estava somente no formato legado A:H.</li>
+          <li>A correção local já foi feita: <code>prepararBaseAnamneseVersionadaPrescricao()</code> agora chama <code>garantirCatalogoVersionadoPrescricao_()</code>.</li>
+          <li>A versão realmente ativa deve ser confirmada após executar a preparação; não assumir versões citadas em contexto antigo.</li>
+        </ul>
+      </section>
     </details>
 
     <details>
-      <summary>Memória de decisões</summary>
-      <table><thead><tr><th>Decisão</th><th>Por que</th><th>Impacto</th></tr></thead><tbody>
-        <tr><td>Substituir Tally pelo PWA</td><td>Webhooks/exportação falhavam e exigiam trocar planilha.</td><td>Novas anamneses usam envio direto.</td></tr>
-        <tr><td>Nova base e legado separado</td><td>Evitar acoplamento com formato imposto pelo Tally.</td><td>Base única v1/v2 e backup legível.</td></tr>
-        <tr><td>Versionar questionários</td><td>Proteger dados quando perguntas mudarem.</td><td>Campos antigos permanecem; significado novo cria versão nova.</td></tr>
-        <tr><td>Rascunho local por seis horas</td><td>Formulário pode ser pausado, fechado ou ficar sem bateria.</td><td>Não usar planilha/cache do servidor para incompletos.</td></tr>
-        <tr><td>Projetos Apps Script separados</td><td>Isolar deploy, cache, gatilhos e riscos do dashboard.</td><td>Exclusão confirmada no dashboard é a única escrita autorizada nas fontes operacionais.</td></tr>
-      </tbody></table>
-    </details>
-
-    <details open>
-      <summary>Dashboard gerencial: WhatsApp e exclusão</summary>
-      <p>Somente o projeto <code>dashboard-analytics/</code> exibe, em cada cartão de demanda, o ícone de WhatsApp, a exclusão e o botão <code>Ver anamnese</code>. O cartão é informativo e não abre a ficha quando clicado. O número cadastrado é transformado em um link <code>wa.me</code>; se houver apenas DDD e número, o DDI brasileiro <code>55</code> é incluído.</p>
-      <p>O ícone vermelho exclui definitivamente a demanda de <code>Respostas</code> e <code>Monitoramento</code> pelo <code>ID da demanda</code>. Ele exige digitar <code>EXCLUIR</code>; o sistema registra o ID, data/hora, motivo e origem em <code>Analytics_Exclusoes</code>. Snapshots já existentes em <code>Analytics_Historico</code> não são modificados.</p>
+      <summary>Arquitetura e modelo de dados</summary>
+      <section>
+        <p>Abas principais: <code>Respostas</code>, <code>Respostas – legado Tally</code>, <code>Analytics_Historico</code>, <code>Monitoramento</code>, <code>Complementar</code> e <code>Questionário</code>. A aba Complementar permanece reservada.</p>
+        <p>O catálogo antigo usa A:H. O modelo versionado acrescenta I:S: Questionário ID, Nome do questionário, Tipo de registro, ID da etapa, Etapa, Ordem da etapa, Ordem da pergunta, Cabeçalho, Publicado em, Atualizado em e Revisão.</p>
+        <p>Arquivos principais: <code>Código.gs</code> e <code>Questionario.gs</code> no PWA operacional; e os equivalentes, mais dados/métricas/histórico, em <code>dashboard-analytics/</code>.</p>
+      </section>
     </details>
 
     <details>
-      <summary>Informações do chat, estado atual e próximos passos</summary>
-      <ul>
-        <li>Os próprios prescritores preenchem a anamnese para alimentar o banco de prescrições posterior.</li>
-        <li>Consentimento e profissional vêm antes da identificação; nome/e-mail lideram a etapa de identificação física com nascimento, altura e peso.</li>
-        <li>O usuário prioriza continuidade no celular: rascunho local de seis horas e nenhuma linha parcial na planilha.</li>
-        <li>Pronto localmente: backend, wizard de sete telas, seletor temático, testes e documentação.</li>
-      </ul>
-      <ol>
-        <li>Sincronizar os arquivos no Apps Script e salvar.</li>
-        <li>Testar <code>/dev</code>, inclusive uma anamnese em celular.</li>
-        <li>Publicar nova versão e conferir a primeira linha v2 em <code>Respostas</code> e <code>Monitoramento</code>.</li>
-        <li>Atualizar ou arquivar o guia antigo de implantação antes de ele ser reutilizado.</li>
-      </ol>
+      <summary>Decisões preservadas</summary>
+      <section>
+        <ul>
+          <li>Uma única versão ativa.</li>
+          <li>Nova versão inicia a partir da ativa e fica em rascunho local até salvar/publicar.</li>
+          <li>Excluir etapa exige confirmação forte e apaga suas perguntas no rascunho.</li>
+          <li>Perguntas mudam de etapa por ação explícita, nunca por arrastar e soltar.</li>
+          <li>Não usar condicionais em v2 ou versões futuras.</li>
+          <li>Dados sensíveis, especialmente WhatsApp, não entram em métricas ou logs.</li>
+        </ul>
+      </section>
     </details>
 
     <details>
-      <summary>Implantação e administração da base</summary>
-      <p>O manifesto declara V8, fuso de Fortaleza, <code>ANYONE</code>, <code>USER_DEPLOYING</code> e escopo de planilhas. Ainda é obrigatório conferir essas escolhas em <strong>Implantar</strong>.</p>
-      <p>O menu <strong>Prescrições</strong> da planilha fornece <code>Validar base versionada</code> (somente leitura) e <code>Preparar base versionada</code> (idempotente, não destrutiva). Usar primeiro a validação.</p>
-      <p>Para publicar: sincronizar <code>Código.gs</code>, <code>index.html</code>, <code>scripts.html</code>, <code>styles.html</code> e <code>appsscript.json</code>; testar <code>/dev</code>; então criar nova versão da implantação.</p>
-    </details>
-
-    <details>
-      <summary>Arquivos ativos e verificações</summary>
-      <ul>
-        <li><code>Código.gs</code>: backend, questionário v2, gravação, monitoramento e preparação da base.</li>
-        <li><code>scripts.html</code>: wizard, rascunho, seletor customizado e chamadas Apps Script.</li>
-        <li><code>styles.html</code>: tema e responsividade.</li>
-        <li><code>docs/IMPLANTACAO_PWA_ANAMNESE_VERSIONADA.md</code>: roteiro de publicação e aceite.</li>
-        <li><code>dashboard-analytics/README_DEPLOY.md</code>: implantação independente do dashboard.</li>
-      </ul>
-      <pre>node scripts/build-preview.js
+      <summary>Validação, próximos passos e riscos</summary>
+      <section>
+        <h3>Antes do próximo deploy</h3>
+        <pre><code>node scripts/build-preview.js
+node dashboard-analytics/scripts/build-preview.js
 node tests/backend.test.js
 node tests/frontend.test.js
 node tests/responsive.test.js
 node dashboard-analytics/tests/backend.test.js
-node dashboard-analytics/tests/sheets.test.js</pre>
-      <p>Os testes acima passaram após os ajustes de 2026-07-20; o responsivo cobre 320, 360, 390, 412, 430 e 880 px.</p>
+node dashboard-analytics/tests/sheets.test.js
+node dashboard-analytics/tests/frontend.test.js</code></pre>
+        <h3>Sequência obrigatória</h3>
+        <ol>
+          <li>Atualizar e salvar <code>Código.gs</code> e <code>Questionario.gs</code> no Apps Script operacional.</li>
+          <li>Executar <strong>Prescrições → Preparar base versionada</strong>.</li>
+          <li>Confirmar as colunas I:S na aba Questionário.</li>
+          <li>Atualizar/publicar o Apps Script do dashboard e validar a aba Questionário.</li>
+          <li>Testar o preenchimento no PWA operacional e a leitura no dashboard.</li>
+        </ol>
+        <p><strong>Cuidados:</strong> não editar o catálogo manualmente durante uma edição; manter os dois Apps Script sincronizados; preservar dados de anamnese; e não versionar <code>.clasp.json</code>, que aponta para deployments específicos.</p>
+      </section>
     </details>
 
     <details>
-      <summary>Riscos, bloqueios e pendências</summary>
-      <ul>
-        <li><strong>Publicação e aceite:</strong> precisam ser confirmados manualmente no Apps Script; não há <code>clasp</code> nem deploy automático configurado.</li>
-        <li><strong>Teste final:</strong> enviar demanda publicada, conferir <code>Respostas</code>, <code>Monitoramento</code>, rascunho e idempotência.</li>
-        <li><strong>Catálogo:</strong> confirmar que a aba <code>Questionário</code> reflete a nova ordem visual de v2.</li>
-        <li><strong class="warning">Documento obsoleto:</strong> <code>docs/IMPLANTACAO_PLANILHA_OFICIAL.md</code> ainda aponta para a planilha antiga e não deve orientar esta implantação.</li>
-        <li><strong>Privacidade:</strong> não reproduzir respostas clínicas reais em testes, documentação, cache analítico ou materiais públicos.</li>
-        <li>Não há repositório Git funcional neste workspace.</li>
-      </ul>
-    </details>
-
-    <details open>
-      <summary>Contexto para outro chat ou IA</summary>
-      <pre>Projeto: PWA de prescrições/anamnese CB + dashboard gerencial independente.
-Workspace: /home/elohimlima/Downloads/VSCODE|ANTIGRAVITY/PRESCRIÇÃO-CB
-
-Leia Contexto/CONTEXTO_DO_PROJETO.md, Código.gs, scripts.html, styles.html,
-appsscript.json e docs/IMPLANTACAO_PWA_ANAMNESE_VERSIONADA.md.
-
-Base oficial: BASE_PRESCRIÇÃO_CB — PWA
-ID: 1qyk_MfgfAP6-n_FlzVaHGcM9o2sIH6WVTv91TExkJNs
-
-Não desfaça: histórico v1, dados/cabeçalhos existentes, rascunho local de 6h,
-idempotência por ID da tentativa, acesso por Conta Google, e separação do dashboard.
-
-Wizard v2: 1 consentimento/responsável; 2 identificação/físico; 3 experiência;
-4 objetivo/rotina; 5 dor/limitações; 6 saúde/preferências; 7 revisão/envio.
-O seletor de dias 1–7 é customizado, não nativo.
-
-Antes de concluir mudanças, execute os testes listados no contexto. Não presuma que
-o código local já foi publicado: confirmar /dev e implantação manual.</pre>
+      <summary>Contexto para outro chat</summary>
+      <section>
+        <p>Estamos no Prescrições CB, com dois PWAs Apps Script ligados à planilha <code>1qyk_MfgfAP6-n_FlzVaHGcM9o2sIH6WVTv91TExkJNs</code>. O dashboard tem um editor versionado: uma versão ativa, rascunho local, sem condicionais e sem drag-and-drop. WhatsApp é obrigatório/protegido e só abre conversa via link. A correção local faz “Preparar base versionada” criar os metadados I:S antes exigidos pelo editor. Primeiro atualizar os dois arquivos operacionais, executar a preparação, validar a aba Questionário e só então publicar/testar.</p>
+      </section>
     </details>
   </main>
 </body>

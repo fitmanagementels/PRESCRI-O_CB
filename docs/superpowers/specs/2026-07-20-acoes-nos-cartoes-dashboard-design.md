@@ -1,6 +1,6 @@
 # Ações nos cartões de demanda — Dashboard
 
-**Data:** 2026-07-20
+**Data:** 2026-07-20  
 **Status:** aprovado pelo usuário
 
 ## Objetivo

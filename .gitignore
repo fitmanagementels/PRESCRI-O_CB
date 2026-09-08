@@ -1,16 +1,15 @@
-# Dependências e arquivos gerados localmente
+# Configurações locais de deploy Apps Script
+.clasp.json
+dashboard-analytics/.clasp.json
+
+# Artefatos gerados e arquivos locais
+preview.html
+dashboard-analytics/preview.html
 node_modules/
+*.log
 .DS_Store
 
-# Configurações e credenciais locais
-.env
-.env.*
-!.env.example
-.clasp.json
-credentials.json
-token.json
-
-# Diretórios internos de ferramentas
+# Estado local de agentes e sessões de trabalho
 .agents/
 .codex/
 .superpowers/

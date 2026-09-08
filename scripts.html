@@ -4,7 +4,7 @@
 
     const SNAPSHOT_KEY = 'prescricoes_resumo_v3';
     const SNAPSHOT_MAX_AGE = 24 * 60 * 60 * 1000;
-    const DEMAND_DRAFT_KEY = 'prescricoes_anamnese_v2_rascunho';
+    const DEMAND_DRAFT_KEY = 'prescricoes_anamnese_v3_rascunho';
     const DEMAND_DRAFT_MAX_AGE = 6 * 60 * 60 * 1000;
     const DEMAND_WIZARD_TITLE = 'Adicionar demanda';
     const DEMAND_FIELD_FREQUENCY_LABEL = 'Frequência pretendida';
@@ -182,7 +182,11 @@
       });
 
       elements.demandWizard.addEventListener('input', salvarRascunhoDemanda);
-      elements.demandWizard.addEventListener('change', salvarRascunhoDemanda);
+      elements.demandWizard.addEventListener('change', function (event) {
+        tratarExclusividadeNenhumDemanda(event);
+        if (event.target && event.target.name) atualizarComplementoOutroDemanda(event.target.name);
+        salvarRascunhoDemanda();
+      });
       elements.demandWizard.addEventListener('click', tratarCliqueSelectCustom);
       elements.demandWizard.addEventListener('keydown', tratarTecladoSelectCustom);
       document.addEventListener('click', function (event) {
@@ -431,7 +435,7 @@
         return { rotulo: rotulo, tipo: tipo, etapa: etapa, obrigatorio: obrigatorio !== false, opcoes: opcoes || [] };
       };
       return {
-        versao: 'v2', profissionais: ['Elias', 'James', 'Lucas'],
+        versao: 'v3', profissionais: ['Elias', 'James', 'Lucas'],
         etapas: ['Consentimento e responsável', 'Identificação e dados físicos', 'Experiência de treino', 'Objetivo e rotina', 'Dor, assimetrias e limitações', 'Saúde e preferências', 'Revisar e enviar'],
         campos: {
           consentimento: campo('Confirmo que minhas respostas serão usadas para avaliar meu perfil e montar uma prescrição de treino personalizada.', 'consentimento', 1), profissional: campo('Nome do profissional', 'profissional', 1),
@@ -1155,10 +1159,6 @@
     }
 
     function carregarQuestionarioDemanda() {
-      if (state.questionario) {
-        renderizarWizardDemanda();
-        return Promise.resolve();
-      }
       elements.wizardDescription.textContent = 'Preparando perguntas';
       return executarAppsScript('getQuestionarioPwaPrescricao')
         .then(function (questionario) {
@@ -1173,7 +1173,7 @@
     }
 
     function criarRascunhoDemanda() {
-      return { versao: state.questionario ? state.questionario.versao : 'v2', salvoEm: Date.now(), etapa: 1, tentativaId: gerarTentativaDemanda(), respostas: {} };
+      return { versao: state.questionario ? state.questionario.versao : 'v3', salvoEm: Date.now(), etapa: 1, tentativaId: gerarTentativaDemanda(), respostas: {} };
     }
 
     function gerarTentativaDemanda() {
@@ -1217,6 +1217,10 @@
       return Object.keys(campos).filter(function (chave) {
         const campo = campos[chave];
         return campo.etapa === etapa;
+      }).sort(function (chaveA, chaveB) {
+        const ordemA = Number(campos[chaveA].ordem) || Number.MAX_SAFE_INTEGER;
+        const ordemB = Number(campos[chaveB].ordem) || Number.MAX_SAFE_INTEGER;
+        return ordemA - ordemB;
       });
     }
 
@@ -1239,6 +1243,29 @@
       if (revisar) elements.wizardReview.innerHTML = renderizarRevisaoDemanda();
     }
 
+    function opcaoBaseDemanda(valor) {
+      return typeof valor === 'string' && /^Outro:\s*/i.test(valor) ? 'Outro' : valor;
+    }
+
+    function complementoOutroDemanda(valor) {
+      return typeof valor === 'string' && /^Outro:\s*/i.test(valor)
+        ? valor.replace(/^Outro:\s*/i, '')
+        : '';
+    }
+
+    function normalizarOutroDemanda(chave, selecionado, complemento) {
+      if (selecionado !== 'Outro') return selecionado;
+      return 'Outro: ' + String(complemento || '').trim();
+    }
+
+    function renderizarComplementoOutroDemanda(chave, marcado, complemento) {
+      const id = 'demand_' + chave + '_outro';
+      return '<div class="wizard-other" data-outro-campo="' + escaparAttr(chave) + '"' + (marcado ? '' : ' hidden') + '>'
+        + '<label for="' + id + '">Qual?</label>'
+        + '<input id="' + id + '" data-outro-input="' + escaparAttr(chave) + '" type="text" value="' + escaparAttr(complemento || '') + '" autocomplete="off">'
+        + '</div>';
+    }
+
     function renderizarCampoDemanda(chave) {
       const campo = state.questionario.campos[chave];
       const respostas = state.demandDraft.respostas || {};
@@ -1250,13 +1277,22 @@
       }
       if (campo.tipo === 'unica' || campo.tipo === 'profissional') {
         const opcoes = campo.tipo === 'profissional' ? (state.questionario.profissionais || []) : campo.opcoes;
+        const valorBase = opcaoBaseDemanda(valor);
+        const temOutro = opcoes.indexOf('Outro') !== -1;
         return '<fieldset class="wizard-field"><legend>' + escaparHtml(campo.rotulo) + (campo.obrigatorio ? ' <em>*</em>' : '') + '</legend>'
-          + opcoes.map(function (opcao) { return '<label class="wizard-choice"><input name="' + chave + '" type="radio" value="' + escaparAttr(opcao) + '"' + (valor === opcao ? ' checked' : '') + obrigatorio + '><span>' + escaparHtml(opcao) + '</span></label>'; }).join('') + '</fieldset>';
+          + opcoes.map(function (opcao) { return '<label class="wizard-choice"><input name="' + chave + '" type="radio" value="' + escaparAttr(opcao) + '"' + (valorBase === opcao ? ' checked' : '') + obrigatorio + '><span>' + escaparHtml(opcao) + '</span></label>'; }).join('')
+          + (temOutro ? renderizarComplementoOutroDemanda(chave, valorBase === 'Outro', complementoOutroDemanda(valor)) : '')
+          + '</fieldset>';
       }
       if (campo.tipo === 'multipla') {
         const marcados = Array.isArray(valor) ? valor : [];
+        const marcadosBase = marcados.map(opcaoBaseDemanda);
+        const respostaOutro = marcados.find(function (item) { return opcaoBaseDemanda(item) === 'Outro'; }) || '';
+        const temOutro = campo.opcoes.indexOf('Outro') !== -1;
         return '<fieldset class="wizard-field"><legend>' + escaparHtml(campo.rotulo) + ' <em>*</em></legend>'
-          + campo.opcoes.map(function (opcao) { return '<label class="wizard-choice"><input name="' + chave + '" type="checkbox" value="' + escaparAttr(opcao) + '"' + (marcados.indexOf(opcao) !== -1 ? ' checked' : '') + '><span>' + escaparHtml(opcao) + '</span></label>'; }).join('') + '</fieldset>';
+          + campo.opcoes.map(function (opcao) { return '<label class="wizard-choice"><input name="' + chave + '" type="checkbox" value="' + escaparAttr(opcao) + '"' + (marcadosBase.indexOf(opcao) !== -1 ? ' checked' : '') + '><span>' + escaparHtml(opcao) + '</span></label>'; }).join('')
+          + (temOutro ? renderizarComplementoOutroDemanda(chave, marcadosBase.indexOf('Outro') !== -1, complementoOutroDemanda(respostaOutro)) : '')
+          + '</fieldset>';
       }
       if (campo.tipo === 'select') {
         const listaId = id + '_opcoes';
@@ -1357,6 +1393,33 @@
       }
     }
 
+    function tratarExclusividadeNenhumDemanda(event) {
+      const input = event.target;
+      if (!input || !input.matches('.wizard-choice input[type="checkbox"]')) return;
+      const grupo = input.closest('fieldset');
+      if (!grupo) return;
+      const opcoes = Array.prototype.slice.call(grupo.querySelectorAll('.wizard-choice input[type="checkbox"]'));
+      if (input.value === 'Nenhum' && input.checked) {
+        opcoes.forEach(function (opcao) {
+          if (opcao !== input) opcao.checked = false;
+        });
+      } else if (input.checked) {
+        const nenhum = opcoes.find(function (opcao) { return opcao.value === 'Nenhum'; });
+        if (nenhum) nenhum.checked = false;
+      }
+    }
+
+    function atualizarComplementoOutroDemanda(chave) {
+      const wrapper = elements.demandWizard.querySelector('[data-outro-campo="' + cssEscape(chave) + '"]');
+      if (!wrapper) return;
+      const controles = Array.prototype.slice.call(elements.demandWizard.querySelectorAll('[name="' + cssEscape(chave) + '"]'));
+      const marcado = controles.some(function (input) { return input.checked && input.value === 'Outro'; });
+      const complemento = wrapper.querySelector('[data-outro-input]');
+      wrapper.hidden = !marcado;
+      complemento.required = marcado;
+      if (!marcado) complemento.value = '';
+    }
+
     function capturarValoresDemanda() {
       const respostas = Object.assign({}, state.demandDraft && state.demandDraft.respostas || {});
       if (!state.questionario) return respostas;
@@ -1364,10 +1427,14 @@
         const campo = state.questionario.campos[chave];
         const controles = elements.demandWizard.querySelectorAll('[name="' + cssEscape(chave) + '"]');
         if (!controles.length) return;
-        if (campo.tipo === 'multipla') respostas[chave] = Array.prototype.slice.call(controles).filter(function (input) { return input.checked; }).map(function (input) { return input.value; });
+        if (campo.tipo === 'multipla') respostas[chave] = Array.prototype.slice.call(controles).filter(function (input) { return input.checked; }).map(function (input) {
+          const complemento = elements.demandWizard.querySelector('[data-outro-input="' + cssEscape(chave) + '"]');
+          return normalizarOutroDemanda(chave, input.value, complemento ? complemento.value : '');
+        });
         else if (campo.tipo === 'unica' || campo.tipo === 'profissional') {
           const marcado = Array.prototype.slice.call(controles).find(function (input) { return input.checked; });
-          respostas[chave] = marcado ? marcado.value : '';
+          const complemento = elements.demandWizard.querySelector('[data-outro-input="' + cssEscape(chave) + '"]');
+          respostas[chave] = marcado ? normalizarOutroDemanda(chave, marcado.value, complemento ? complemento.value : '') : '';
         } else if (campo.tipo === 'consentimento') respostas[chave] = !!controles[0].checked;
         else respostas[chave] = controles[0].value;
       });
@@ -1404,6 +1471,17 @@
             : controles[0];
           alvo.focus();
           return false;
+        }
+        const outroMarcado = Array.prototype.slice.call(controles).some(function (input) {
+          return input.checked && input.value === 'Outro';
+        });
+        if (outroMarcado) {
+          const complemento = elements.demandWizard.querySelector('[data-outro-input="' + cssEscape(campos[i]) + '"]');
+          if (!complemento || !complemento.value.trim()) {
+            mostrarAviso('Explique a opção Outro: ' + campo.rotulo, true, false);
+            if (complemento) complemento.focus();
+            return false;
+          }
         }
       }
       return true;

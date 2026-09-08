@@ -345,7 +345,13 @@
   .custom-select-menu button[aria-selected="true"] { background: var(--lime-strong); color: #080b02; font-weight: 900; }
   .wizard-choice, .wizard-consent { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); cursor: pointer; }
   .wizard-choice input, .wizard-consent input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--lime-strong); }
+  .wizard-choice:has(input:checked), .wizard-consent:has(input:checked) { border-color: var(--lime-strong); background: rgba(223,255,50,.08); }
+  .wizard-choice:focus-within, .wizard-consent:focus-within { outline: 3px solid var(--lime); outline-offset: 2px; }
   .wizard-consent { margin-top: 6px; align-items: flex-start; line-height: 1.35; }
+  .wizard-other { display: grid; gap: 8px; margin: 4px 0 0 30px; padding: 12px; border-left: 3px solid var(--lime); }
+  .wizard-other[hidden] { display: none; }
+  .wizard-other input { min-height: 48px; }
+  .wizard-other input:focus-visible { outline: 3px solid var(--lime); outline-offset: 2px; border-color: var(--lime-strong); }
   .wizard-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 26px; }
   .wizard-actions .save-button { min-height: 48px; grid-column: span 2; }
   .wizard-review { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line); }
@@ -1163,6 +1169,7 @@
     .app-tab { min-width:0; min-height:48px; padding:0 8px; font-size:13px; }
     .tab-label-full{display:none}.tab-label-mobile{display:inline}
     .demand-wizard { margin-right: -2px; margin-left: -2px; padding: 18px 15px max(20px, env(safe-area-inset-bottom)); }
+    .wizard-other { margin-left: 0; }
     .wizard-actions { grid-template-columns: 1fr; }
     .wizard-actions .save-button { grid-column: auto; }
     :root {

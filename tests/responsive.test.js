@@ -31,6 +31,7 @@ function probeHtml(width) {
     const result = document.getElementById('result');
     frame.addEventListener('load', function () {
       const limite = Date.now() + 5000;
+      let abaDemandaAberta = false;
       const timer = setInterval(function () {
         const doc = frame.contentDocument;
         const shell = doc && doc.getElementById('appShell');
@@ -39,11 +40,29 @@ function probeHtml(width) {
           && doc.querySelector('.student-card')
           && doc.querySelector('.answer-value');
         if (!pronto && Date.now() < limite) return;
-        clearInterval(timer);
         if (!pronto) {
+          clearInterval(timer);
           result.textContent = JSON.stringify({ error: 'Aplicativo não carregou no tempo limite.' });
           return;
         }
+        if (!abaDemandaAberta) {
+          doc.querySelector('[data-app-view="nova-demanda"]').click();
+          abaDemandaAberta = true;
+          return;
+        }
+        const escolhaWizard = doc.querySelector('.wizard-choice');
+        const consentimentoWizard = doc.querySelector('.wizard-consent');
+        if ((!escolhaWizard || !consentimentoWizard) && Date.now() < limite) return;
+        if (!escolhaWizard || !consentimentoWizard) {
+          clearInterval(timer);
+          result.textContent = JSON.stringify({ error: 'Anamnese v3 não carregou no tempo limite.' });
+          return;
+        }
+        clearInterval(timer);
+        const wizardChoiceHeight = escolhaWizard.getBoundingClientRect().height;
+        const wizardConsentHeight = consentimentoWizard.getBoundingClientRect().height;
+        const wizardOverflow = doc.querySelector('#demandWizard').scrollWidth > doc.querySelector('#demandWizard').clientWidth;
+        doc.querySelector('[data-app-view="acompanhamento"]').click();
         const root = doc.documentElement;
         const query = (selector) => doc.querySelector(selector);
         const style = (selector) => getComputedStyle(query(selector));
@@ -79,6 +98,9 @@ function probeHtml(width) {
           tabsOverflow: navegacao.scrollWidth > navegacao.clientWidth,
           tabsNaPrimeiraLinha: abasNaPrimeiraLinha,
           tabHeight: rect('.app-tab').height,
+          wizardChoiceHeight: wizardChoiceHeight,
+          wizardConsentHeight: wizardConsentHeight,
+          wizardOverflow: wizardOverflow,
         });
       }, 50);
     });
@@ -108,7 +130,9 @@ async function medir(width) {
     ], { maxBuffer: 5 * 1024 * 1024 });
     const resultado = stdout.match(/<pre id="result">([^<]+)<\/pre>/);
     assert(resultado, `Chrome não retornou as métricas para ${width}px.`);
-    return JSON.parse(resultado[1].replaceAll('&quot;', '"').replaceAll('&amp;', '&'));
+    const textoResultado = resultado[1].replaceAll('&quot;', '"').replaceAll('&amp;', '&');
+    assert(textoResultado.startsWith('{'), `Chrome não concluiu a medição para ${width}px: ${textoResultado}`);
+    return JSON.parse(textoResultado);
   } finally {
     fs.rmSync(perfil, { recursive: true, force: true });
   }
@@ -143,6 +167,9 @@ async function executar() {
     assert.strictEqual(medida.tabsOverflow, false, `Navegação não deve ter rolagem horizontal em ${width}px.`);
     assert.strictEqual(medida.tabsNaPrimeiraLinha, 2, `As duas abas devem ficar lado a lado em ${width}px.`);
     assert(medida.tabHeight >= 48, `Abas devem manter 48px de toque em ${width}px.`);
+    assert(medida.wizardChoiceHeight >= 48, `Escolhas devem ter 48px em ${width}px.`);
+    assert(medida.wizardConsentHeight >= 48, `Consentimento deve ter 48px em ${width}px.`);
+    assert.strictEqual(medida.wizardOverflow, false, `Wizard não deve transbordar em ${width}px.`);
     assert(
       medida.modalTouchAction.includes('pinch-zoom'),
       `Modal deve permitir zoom por pinça em ${width}px.`

@@ -48,10 +48,13 @@ function etapasSementeQuestionarioPrescricao_() {
   });
 }
 
-function montarQuestionarioSementePrescricao_() {
+function montarQuestionarioSementePrescricao_(versao) {
+  const codigoVersao = textoQuestionarioPrescricao_(versao) || PRESCRICAO_VERSAO_PRINCIPAL;
+  const definicao = PRESCRICAO_QUESTIONARIOS[codigoVersao];
+  if (!definicao) throw new Error('Versão de questionário não suportada: ' + codigoVersao + '.');
   const etapas = etapasSementeQuestionarioPrescricao_();
-  Object.keys(PRESCRICAO_QUESTIONARIOS.v2.campos).forEach(function (codigo, indice) {
-    const campoOriginal = PRESCRICAO_QUESTIONARIOS.v2.campos[codigo];
+  Object.keys(definicao.campos).forEach(function (codigo, indice) {
+    const campoOriginal = definicao.campos[codigo];
     const etapa = etapas[campoOriginal.etapa - 1];
     etapa.campos.push({
       codigo: codigo,
@@ -66,8 +69,8 @@ function montarQuestionarioSementePrescricao_() {
   return {
     questionarioId: 'anamnese_inicial',
     nome: 'Anamnese inicial',
-    versao: 'v2',
-    status: 'Ativa',
+    versao: codigoVersao,
+    status: codigoVersao === PRESCRICAO_VERSAO_PRINCIPAL ? 'Rascunho' : 'Arquivada',
     revisao: 1,
     etapas: etapas,
   };
@@ -121,68 +124,79 @@ function escreverMetadadosLinhaQuestionarioPrescricao_(aba, linha, indices, valo
 
 function garantirCatalogoVersionadoPrescricao_(planilha) {
   const ss = planilha || obterPlanilhaPrescricao_();
+  if (typeof garantirCatalogoQuestionarioPrescricao_ === 'function') {
+    garantirCatalogoQuestionarioPrescricao_(ss);
+  }
   let aba = ss.getSheetByName(PRESCRICAO_CONFIG.abaQuestionario);
   if (!aba) aba = ss.insertSheet(PRESCRICAO_CONFIG.abaQuestionario);
   const cabecalhos = garantirCabecalhosQuestionarioPrescricao_(aba);
   const indices = indiceCabecalhosQuestionarioPrescricao_(cabecalhos);
   const valores = aba.getLastRow() > 1 ? aba.getRange(2, 1, aba.getLastRow() - 1, cabecalhos.length).getValues() : [];
-  const semente = montarQuestionarioSementePrescricao_();
-  const porCodigo = {};
+  const porVersaoECodigo = {};
+  const statusPorVersao = {};
   valores.forEach(function (linha, indice) {
     const codigo = textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(linha, indices, 'Código'));
     const versao = textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(linha, indices, 'Versão'));
-    if (versao === 'v2' && codigo) porCodigo[codigo] = indice + 2;
-  });
-
-  semente.etapas.forEach(function (etapa) {
-    const jaExiste = valores.some(function (linha) {
-      return textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(linha, indices, 'Versão')) === 'v2'
-        && textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(linha, indices, 'Tipo de registro')) === 'etapa'
-        && textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(linha, indices, 'ID da etapa')) === etapa.id;
-    });
-    if (!jaExiste) {
-      const linha = Array(cabecalhos.length).fill('');
-      linha[indices[normalizarCabecalhoPrescricao_('Versão')]] = 'v2';
-      linha[indices[normalizarCabecalhoPrescricao_('Status')]] = 'Ativa';
-      linha[indices[normalizarCabecalhoPrescricao_('Questionário ID')]] = semente.questionarioId;
-      linha[indices[normalizarCabecalhoPrescricao_('Nome do questionário')]] = semente.nome;
-      linha[indices[normalizarCabecalhoPrescricao_('Tipo de registro')]] = 'etapa';
-      linha[indices[normalizarCabecalhoPrescricao_('ID da etapa')]] = etapa.id;
-      linha[indices[normalizarCabecalhoPrescricao_('Etapa')]] = etapa.titulo;
-      linha[indices[normalizarCabecalhoPrescricao_('Ordem da etapa')]] = etapa.ordem;
-      linha[indices[normalizarCabecalhoPrescricao_('Publicado em')]] = new Date();
-      linha[indices[normalizarCabecalhoPrescricao_('Atualizado em')]] = new Date();
-      linha[indices[normalizarCabecalhoPrescricao_('Revisão')]] = 1;
-      aba.appendRow(linha);
+    if (versao && codigo) porVersaoECodigo[versao + '|' + codigo] = indice + 2;
+    if (versao && !statusPorVersao[versao]) {
+      statusPorVersao[versao] = normalizarStatusQuestionarioPrescricao_(valorQuestionarioPrescricao_(linha, indices, 'Status'));
     }
   });
 
-  semente.etapas.forEach(function (etapa) {
-    etapa.campos.forEach(function (campo) {
-      const linha = porCodigo[campo.codigo];
-      if (!linha) return;
-      const valoresAtuais = aba.getRange(linha, 1, 1, cabecalhos.length).getValues()[0];
-      const precisaMigrar = !textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(valoresAtuais, indices, 'Tipo de registro'))
-        || !textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(valoresAtuais, indices, 'ID da etapa'))
-        || !textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(valoresAtuais, indices, 'Cabeçalho'));
-      if (!precisaMigrar) return;
-      escreverMetadadosLinhaQuestionarioPrescricao_(aba, linha, indices, {
-        'Questionário ID': semente.questionarioId,
-        'Nome do questionário': semente.nome,
-        'Tipo de registro': 'pergunta',
-        'ID da etapa': etapa.id,
-        'Etapa': etapa.titulo,
-        'Ordem da etapa': etapa.ordem,
-        'Ordem da pergunta': campo.ordem,
-        'Cabeçalho': campo.cabecalho,
-        'Publicado em': new Date(),
-        'Atualizado em': new Date(),
-        'Revisão': 1,
+  ['v2', 'v3'].forEach(function (versao) {
+    const semente = montarQuestionarioSementePrescricao_(versao);
+    const status = statusPorVersao[versao] || (versao === 'v2' ? 'Ativa' : 'Rascunho');
+    semente.etapas.forEach(function (etapa) {
+      const jaExiste = valores.some(function (linha) {
+        return textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(linha, indices, 'Versão')) === versao
+          && textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(linha, indices, 'Tipo de registro')) === 'etapa'
+          && textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(linha, indices, 'ID da etapa')) === etapa.id;
+      });
+      if (!jaExiste) {
+        const linhaEtapa = Array(cabecalhos.length).fill('');
+        linhaEtapa[indices[normalizarCabecalhoPrescricao_('Versão')]] = versao;
+        linhaEtapa[indices[normalizarCabecalhoPrescricao_('Status')]] = status;
+        linhaEtapa[indices[normalizarCabecalhoPrescricao_('Questionário ID')]] = semente.questionarioId;
+        linhaEtapa[indices[normalizarCabecalhoPrescricao_('Nome do questionário')]] = semente.nome;
+        linhaEtapa[indices[normalizarCabecalhoPrescricao_('Tipo de registro')]] = 'etapa';
+        linhaEtapa[indices[normalizarCabecalhoPrescricao_('ID da etapa')]] = etapa.id;
+        linhaEtapa[indices[normalizarCabecalhoPrescricao_('Etapa')]] = etapa.titulo;
+        linhaEtapa[indices[normalizarCabecalhoPrescricao_('Ordem da etapa')]] = etapa.ordem;
+        linhaEtapa[indices[normalizarCabecalhoPrescricao_('Publicado em')]] = status === 'Ativa' ? new Date() : '';
+        linhaEtapa[indices[normalizarCabecalhoPrescricao_('Atualizado em')]] = new Date();
+        linhaEtapa[indices[normalizarCabecalhoPrescricao_('Revisão')]] = 1;
+        aba.appendRow(linhaEtapa);
+      }
+    });
+
+    semente.etapas.forEach(function (etapa) {
+      etapa.campos.forEach(function (campo) {
+        const numeroLinha = porVersaoECodigo[versao + '|' + campo.codigo];
+        if (!numeroLinha) return;
+        const valoresAtuais = aba.getRange(numeroLinha, 1, 1, cabecalhos.length).getValues()[0];
+        const precisaMigrar = !textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(valoresAtuais, indices, 'Tipo de registro'))
+          || !textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(valoresAtuais, indices, 'ID da etapa'))
+          || !textoQuestionarioPrescricao_(valorQuestionarioPrescricao_(valoresAtuais, indices, 'Cabeçalho'));
+        if (!precisaMigrar) return;
+        escreverMetadadosLinhaQuestionarioPrescricao_(aba, numeroLinha, indices, {
+          'Questionário ID': semente.questionarioId,
+          'Nome do questionário': semente.nome,
+          'Tipo de registro': 'pergunta',
+          'ID da etapa': etapa.id,
+          'Etapa': etapa.titulo,
+          'Ordem da etapa': etapa.ordem,
+          'Ordem da pergunta': campo.ordem,
+          'Cabeçalho': campo.cabecalho,
+          'Publicado em': status === 'Ativa' ? new Date() : '',
+          'Atualizado em': new Date(),
+          'Revisão': 1,
+        });
       });
     });
   });
   aba.setFrozenRows(1);
-  return { aba: aba, versaoAtiva: 'v2' };
+  const ativa = lerVersoesQuestionarioPrescricao_(ss).filter(function (item) { return item.status === 'Ativa'; })[0];
+  return { aba: aba, versaoAtiva: ativa ? ativa.versao : '' };
 }
 
 function lerVersoesQuestionarioPrescricao_(planilha) {
@@ -250,13 +264,41 @@ function lerVersoesQuestionarioPrescricao_(planilha) {
   });
 }
 
+function validarVersaoQuestionarioPrescricao_(questionario, versaoEsperada) {
+  const validacao = validarRascunhoQuestionarioPrescricao_(questionario);
+  const etapas = questionario && Array.isArray(questionario.etapas) ? questionario.etapas : [];
+  const totalPerguntas = etapas.reduce(function (total, etapa) {
+    return total + (Array.isArray(etapa.campos) ? etapa.campos.length : 0);
+  }, 0);
+  if (!questionario || questionario.versao !== versaoEsperada) {
+    throw new Error('Versão inesperada: ' + (questionario && questionario.versao ? questionario.versao : 'ausente') + '.');
+  }
+  if (etapas.length !== 6 || totalPerguntas !== 28) {
+    throw new Error('A ' + versaoEsperada + ' deve possuir 6 etapas e 28 perguntas.');
+  }
+  if (!validacao.ok) {
+    throw new Error(validacao.erros.map(function (erro) { return erro.mensagem; }).join(' '));
+  }
+  return true;
+}
+
+function selecionarQuestionarioAtivoPrescricao_(questionarios) {
+  const ativas = (questionarios || []).filter(function (item) { return item.status === 'Ativa'; });
+  if (ativas.length !== 1) {
+    throw new Error('A configuração deve possuir exatamente uma versão ativa; encontradas: ' + ativas.length + '.');
+  }
+  const validacao = validarRascunhoQuestionarioPrescricao_(ativas[0]);
+  if (!validacao.ok) {
+    throw new Error('A versão ativa está incompleta: ' + validacao.erros.map(function (erro) { return erro.mensagem; }).join(' '));
+  }
+  return ativas[0];
+}
+
 function obterQuestionarioAtivoPrescricao_(planilha) {
-  if (!planilha && (typeof SpreadsheetApp === 'undefined' || !SpreadsheetApp.openById)) return montarQuestionarioSementePrescricao_();
-  garantirCatalogoVersionadoPrescricao_(planilha);
-  const ativa = lerVersoesQuestionarioPrescricao_(planilha).filter(function (questionario) {
-    return questionario.status === 'Ativa';
-  })[0];
-  return ativa || montarQuestionarioSementePrescricao_();
+  if (!planilha && (typeof SpreadsheetApp === 'undefined' || !SpreadsheetApp.openById)) {
+    return montarQuestionarioSementePrescricao_(PRESCRICAO_VERSAO_PRINCIPAL);
+  }
+  return selecionarQuestionarioAtivoPrescricao_(lerVersoesQuestionarioPrescricao_(planilha || obterPlanilhaPrescricao_()));
 }
 
 function validarRascunhoQuestionarioPrescricao_(rascunho) {
@@ -292,4 +334,45 @@ function validarRascunhoQuestionarioPrescricao_(rascunho) {
     if (!protegidos[codigo]) erros.push({ campo: codigo, mensagem: 'O campo obrigatório "' + codigo + '" não pode ser removido.' });
   });
   return { ok: !erros.length, erros: erros };
+}
+
+function prepararEAtivarQuestionarioV3Prescricao() {
+  return executarComLockPrescricao_(function () {
+    const planilha = obterPlanilhaPrescricao_();
+    garantirCatalogoVersionadoPrescricao_(planilha);
+    const antes = lerVersoesQuestionarioPrescricao_(planilha);
+    const v3 = antes.filter(function (item) { return item.versao === 'v3'; })[0];
+    validarVersaoQuestionarioPrescricao_(v3, 'v3');
+
+    const aba = planilha.getSheetByName(PRESCRICAO_CONFIG.abaQuestionario);
+    const cabecalhos = aba.getRange(1, 1, 1, aba.getLastColumn()).getDisplayValues()[0];
+    const indices = indiceCabecalhosQuestionarioPrescricao_(cabecalhos);
+    const indiceVersao = indices[normalizarCabecalhoPrescricao_('Versão')];
+    const indiceStatus = indices[normalizarCabecalhoPrescricao_('Status')];
+    const indicePublicado = indices[normalizarCabecalhoPrescricao_('Publicado em')];
+    const indiceAtualizado = indices[normalizarCabecalhoPrescricao_('Atualizado em')];
+    if (indiceVersao === undefined || indiceStatus === undefined) {
+      throw new Error('A aba Questionário não possui Versão e Status.');
+    }
+    const agora = new Date();
+    const valores = aba.getRange(2, 1, aba.getLastRow() - 1, cabecalhos.length).getValues();
+    valores.forEach(function (linha) {
+      const versao = textoQuestionarioPrescricao_(linha[indiceVersao]);
+      const status = normalizarStatusQuestionarioPrescricao_(linha[indiceStatus]);
+      if (versao === 'v3') {
+        linha[indiceStatus] = 'Ativa';
+        if (indicePublicado !== undefined) linha[indicePublicado] = agora;
+        if (indiceAtualizado !== undefined) linha[indiceAtualizado] = agora;
+      } else if (status === 'Ativa') {
+        linha[indiceStatus] = 'Arquivada';
+        if (indiceAtualizado !== undefined) linha[indiceAtualizado] = agora;
+      }
+    });
+    aba.getRange(2, 1, valores.length, cabecalhos.length).setValues(valores);
+    SpreadsheetApp.flush();
+    const ativa = selecionarQuestionarioAtivoPrescricao_(lerVersoesQuestionarioPrescricao_(planilha));
+    validarVersaoQuestionarioPrescricao_(ativa, 'v3');
+    if (typeof removerPayloadPrescricoesCache_ === 'function') removerPayloadPrescricoesCache_();
+    return { ok: true, versaoAtiva: ativa.versao, etapas: ativa.etapas.length, perguntas: 28 };
+  });
 }

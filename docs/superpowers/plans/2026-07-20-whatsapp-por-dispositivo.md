@@ -68,7 +68,7 @@ Run: `node dashboard-analytics/tests/frontend.test.js && node dashboard-analytic
 
 Expected: `Frontend analytics aprovado.` and `Backend analytics aprovado.`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add dashboard-analytics/scripts.html dashboard-analytics/tests/frontend.test.js docs/superpowers/specs/2026-07-20-whatsapp-por-dispositivo-design.md docs/superpowers/plans/2026-07-20-whatsapp-por-dispositivo.md
