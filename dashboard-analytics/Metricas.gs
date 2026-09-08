@@ -39,6 +39,8 @@ function agregarProdutividadeAnalytics_(fatos, inicio, fim, profissional) {
   const backlog = escopo.filter(function (f) { return f.status !== 'prescrita'; });
   const tempos = concluidas.map(function (f) { return f.tempoConclusaoDias; }).filter(function (v) { return v != null && v >= 0; });
   const slaValidas = concluidas.filter(function (f) { return f.sla === 'dentro_prazo' || f.sla === 'atrasada'; });
+  const conclusoesNoPrazo = slaValidas.filter(function (f) { return f.sla === 'dentro_prazo'; }).length;
+  const amostraConclusoes = concluidas.length;
   const diasPeriodo = Math.max(1, (calcularDiasCivisAnalytics_(inicio, fim) || 0) + 1);
   const ultima = concluidas.map(function (f) { return f.dataConclusao; }).sort().pop() || '';
   return {
@@ -46,20 +48,25 @@ function agregarProdutividadeAnalytics_(fatos, inicio, fim, profissional) {
     recebidas: recebidas.length,
     concluidas: concluidas.length,
     saldo: recebidas.length - concluidas.length,
+    variacaoFila: recebidas.length - concluidas.length,
     backlog: backlog.length,
     naoTransferidas: backlog.filter(function (f) { return f.status === 'nao_transferida'; }).length,
     pendentes: backlog.filter(function (f) { return f.status === 'pendente' || f.status === 'inconsistente'; }).length,
     atrasadas: backlog.filter(function (f) { return f.sla === 'atrasada'; }).length,
     taxaConclusao: recebidas.length ? arredondarAnalytics_(concluidasDaCoorte.length / recebidas.length * 100, 1) : null,
-    taxaSla: slaValidas.length ? arredondarAnalytics_(slaValidas.filter(function (f) { return f.sla === 'dentro_prazo'; }).length / slaValidas.length * 100, 1) : null,
+    taxaSla: slaValidas.length ? arredondarAnalytics_(conclusoesNoPrazo / slaValidas.length * 100, 1) : null,
+    amostraConclusoes: amostraConclusoes,
+    conclusoesComSla: slaValidas.length,
+    conclusoesNoPrazo: conclusoesNoPrazo,
     tempoMedio: arredondarAnalytics_(mediaAnalytics_(tempos), 1),
     tempoMediano: arredondarAnalytics_(medianaAnalytics_(tempos), 1),
     tempoP75: arredondarAnalytics_(percentilAnalytics_(tempos, 0.75), 1),
+    tempoP75Seguro: amostraConclusoes >= 5 ? arredondarAnalytics_(percentilAnalytics_(tempos, 0.75), 1) : null,
     maiorEspera: backlog.length ? Math.max.apply(null, backlog.map(function (f) { return f.idadeDias == null ? 0 : f.idadeDias; })) : 0,
     producaoDiaria: arredondarAnalytics_(concluidas.length / diasPeriodo, 2),
     producaoSemanal: arredondarAnalytics_(concluidas.length / diasPeriodo * 7, 1),
     ultimaConclusao: ultima,
-    amostraInsuficiente: concluidas.length < 5,
+    amostraInsuficiente: amostraConclusoes < 5,
   };
 }
 
@@ -68,6 +75,26 @@ function calcularProdutividadeAnalytics_(fatos, inicio, fim) {
     equipe: agregarProdutividadeAnalytics_(fatos, inicio, fim, null),
     porProfissional: profissionaisUnicosAnalytics_(fatos).map(function (nome) { return agregarProdutividadeAnalytics_(fatos, inicio, fim, nome); }),
   };
+}
+
+function gerarInsightOperacionalAnalytics_(equipe, porProfissional) {
+  equipe = equipe || {};
+  const profissionais = (porProfissional || []).slice();
+  const porAtrasos = profissionais.slice().sort(function (a, b) { return (b.atrasadas || 0) - (a.atrasadas || 0); });
+  const foco = porAtrasos[0] || null;
+  if (equipe.atrasadas) {
+    const complemento = foco && foco.atrasadas
+      ? ' Maior concentração: ' + foco.profissional + ' (' + foco.atrasadas + ').'
+      : '';
+    return { tipo: 'atrasos', titulo: 'Atenção aos prazos', detalhe: equipe.atrasadas + ' demanda(s) atrasada(s) na fila.' + complemento, profissional: foco && foco.atrasadas ? foco.profissional : '' };
+  }
+  if (equipe.variacaoFila > 0) {
+    return { tipo: 'fila_crescendo', titulo: 'Fila em crescimento', detalhe: 'Entraram ' + equipe.variacaoFila + ' demanda(s) a mais do que foram concluídas no período.', profissional: '' };
+  }
+  if (!equipe.concluidas && equipe.backlog) {
+    return { tipo: 'sem_conclusoes', titulo: 'Sem conclusões no período', detalhe: 'Há demandas abertas, mas nenhuma prescrição foi concluída no recorte selecionado.', profissional: '' };
+  }
+  return { tipo: 'estavel', titulo: 'Operação sob controle', detalhe: 'Não há atrasos nem crescimento da fila no período selecionado.', profissional: '' };
 }
 
 function chavePeriodoAnalytics_(dataIso, granularidade) {
@@ -164,6 +191,7 @@ function montarPayloadDashboardAnalytics_(fatos, historico, opcoes) {
   });
   produtividade.diagnosticos = diagnosticarGargalosAnalytics_(produtividade.equipe, null, anterior.equipe);
   produtividade.comparacaoAnterior = compararPeriodosAnalytics_(produtividade.equipe, anterior.equipe);
+  produtividade.insightOperacional = gerarInsightOperacionalAnalytics_(produtividade.equipe, produtividade.porProfissional);
   return {
     meta: { atualizadoEm: new Date().toISOString(), slaDias: ANALYTICS_CONFIG.slaDias, spreadsheetId: ANALYTICS_CONFIG.spreadsheetId, versao: ANALYTICS_CONFIG.versao, inicio: inicio, fim: fim, granularidade: granularidade },
     filtros: { profissionais: profissionaisUnicosAnalytics_(fatos), periodos: [] },

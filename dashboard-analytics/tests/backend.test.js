@@ -95,4 +95,28 @@ assert.deepStrictEqual(
   JSON.parse(JSON.stringify(context.filtrarFatosDashboardAnalytics_(amostra, filtroSeteDias))),
   amostra.filter((fato) => fato.profissional === 'Profissional A')
 );
+
+const fatosDePrazo = [
+  { submissionId: 'P1', profissional: 'Profissional A', dataEntrada: '2026-07-01', dataConclusao: '2026-07-02', status: 'prescrita', tempoConclusaoDias: 1, sla: 'dentro_prazo' },
+  { submissionId: 'P2', profissional: 'Profissional A', dataEntrada: '2026-07-01', dataConclusao: '2026-07-03', status: 'prescrita', tempoConclusaoDias: 2, sla: 'dentro_prazo' },
+  { submissionId: 'P3', profissional: 'Profissional A', dataEntrada: '2026-07-01', dataConclusao: '2026-07-03', status: 'prescrita', tempoConclusaoDias: 2, sla: 'dentro_prazo' },
+  { submissionId: 'P4', profissional: 'Profissional A', dataEntrada: '2026-07-01', dataConclusao: '2026-07-04', status: 'prescrita', tempoConclusaoDias: 3, sla: 'atrasada' },
+  { submissionId: 'P5', profissional: 'Profissional A', dataEntrada: '2026-07-01', dataConclusao: '2026-07-03', status: 'prescrita', tempoConclusaoDias: 2, sla: 'dentro_prazo' },
+  { submissionId: 'P6', profissional: 'Profissional A', dataEntrada: '2026-07-01', dataConclusao: '2026-07-03', status: 'prescrita', tempoConclusaoDias: 2, sla: 'dentro_prazo' },
+  { submissionId: 'P7', profissional: 'Profissional B', dataEntrada: '2026-07-02', dataConclusao: '', status: 'pendente', idadeDias: 5, sla: 'atrasada' },
+  { submissionId: 'P8', profissional: 'Profissional B', dataEntrada: '2026-07-03', dataConclusao: '', status: 'nao_transferida', idadeDias: 4, sla: 'atrasada' },
+];
+const agregadoPrazo = context.agregarProdutividadeAnalytics_(fatosDePrazo, '2026-07-01', '2026-07-07', null);
+assert.strictEqual(agregadoPrazo.amostraConclusoes, 6);
+assert.strictEqual(agregadoPrazo.conclusoesComSla, 6);
+assert.strictEqual(agregadoPrazo.conclusoesNoPrazo, 5);
+assert.strictEqual(agregadoPrazo.variacaoFila, agregadoPrazo.recebidas - agregadoPrazo.concluidas);
+assert.strictEqual(agregadoPrazo.tempoP75Seguro, agregadoPrazo.tempoP75);
+assert.strictEqual(produtividade.equipe.tempoP75Seguro, null);
+const insightOperacional = context.gerarInsightOperacionalAnalytics_(
+  agregadoPrazo,
+  context.calcularProdutividadeAnalytics_(fatosDePrazo, '2026-07-01', '2026-07-07').porProfissional
+);
+assert.strictEqual(insightOperacional.tipo, 'atrasos');
+assert(insightOperacional.detalhe.includes('atrasada'));
 console.log('Backend analytics aprovado.');
