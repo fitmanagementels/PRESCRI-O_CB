@@ -79,4 +79,20 @@ assert(payload.produtividade.equipe);
 assert(Array.isArray(payload.comparativos.serieFluxo));
 assert(Array.isArray(payload.qualidade));
 assert(!JSON.stringify(payload.produtividade).includes('Pessoa Alfa'));
+
+const filtroSeteDias = context.normalizarFiltrosDashboardAnalytics_(
+  { periodo: '7', profissional: 'Profissional A' }, amostra, '2026-07-07'
+);
+assert.deepStrictEqual(JSON.parse(JSON.stringify(filtroSeteDias)), {
+  periodo: '7', profissional: 'Profissional A', inicio: '2026-07-01', fim: '2026-07-07'
+});
+const filtroHistorico = context.normalizarFiltrosDashboardAnalytics_(
+  { periodo: 'todos', profissional: 'todos' }, amostra, '2026-07-07'
+);
+assert.strictEqual(filtroHistorico.inicio, '2026-07-01');
+assert.strictEqual(filtroHistorico.fim, '2026-07-07');
+assert.deepStrictEqual(
+  JSON.parse(JSON.stringify(context.filtrarFatosDashboardAnalytics_(amostra, filtroSeteDias))),
+  amostra.filter((fato) => fato.profissional === 'Profissional A')
+);
 console.log('Backend analytics aprovado.');

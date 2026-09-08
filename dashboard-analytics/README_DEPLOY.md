@@ -91,8 +91,8 @@ Essa URL é diferente da URL do app operacional. Em alterações futuras, use **
 
 ## Uso cotidiano
 
-- Ao abrir, o app usa cache próprio por até 10 minutos para acelerar a primeira tela.
-- O botão **Atualizar dados** ignora o cache, relê as fontes e atualiza o snapshot do dia.
+- Ao abrir e ao mudar o período ou o profissional, o app relê as fontes e recalcula todos os indicadores no mesmo recorte.
+- O botão **Atualizar dados** também atualiza o snapshot do dia.
 - O gatilho diário mantém a evolução de backlog e produtividade registrada mesmo quando ninguém abre o app.
 - A visão padrão de Acompanhamento é **A fazer**, combinação de demandas não transferidas e aguardando prescrição.
 - Na aba **Acompanhamento**, clique em qualquer cartão ou em **Ver anamnese** para abrir a ficha completa do aluno em um pop-up.

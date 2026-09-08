@@ -1100,12 +1100,14 @@ function tratarAcaoQuestionario(botao) {
 }
 
 function renderizarTudo() { fecharAjuda(false); fecharAnamnese(false); renderizarAcompanhamento(); renderizarProdutividade(); renderizarComparativos(); }
+function filtrosDashboard() { return { periodo: state.periodo, profissional: state.profissional }; }
 function preencherFiltros() {
   const select = el('professionalFilter');
   if (!select || !state.payload) return;
   select.innerHTML = '<option value="todos">Equipe completa</option>' + state.payload.filtros.profissionais.map(function (p) {
     return '<option value="' + esc(p) + '">' + esc(p) + '</option>';
   }).join('');
+  if (state.payload.filtros.profissionais.indexOf(state.profissional) < 0) state.profissional = 'todos';
   select.value = state.profissional;
   atualizarMenuTematizado(select);
 }
@@ -1116,7 +1118,7 @@ function aplicarPayload(resposta) { if(!resposta||resposta.ok===false){mostrarEr
 
 function carregarDados(forcar) {
   if(state.carregando)return; state.carregando=true; const botao=el('refreshButton'); if(botao)botao.disabled=true; mostrarAviso(forcar?'Atualizando planilha e indicadores…':'','');
-  chamarServidor(forcar?'atualizarDashboardAnalytics':'getDashboardAnalytics').then(function(resposta){aplicarPayload(resposta);if(forcar)mostrarAviso('Dados e snapshot de hoje atualizados.','ok');}).catch(function(erro){mostrarAviso('Não foi possível carregar: '+(erro.message||erro),'erro');finalizarBoot();}).finally(function(){state.carregando=false;if(botao)botao.disabled=false;});
+  chamarServidor(forcar?'atualizarDashboardAnalytics':'getDashboardAnalytics', filtrosDashboard()).then(function(resposta){aplicarPayload(resposta);if(forcar)mostrarAviso('Dados e snapshot de hoje atualizados.','ok');}).catch(function(erro){mostrarAviso('Não foi possível carregar: '+(erro.message||erro),'erro');finalizarBoot();}).finally(function(){state.carregando=false;if(botao)botao.disabled=false;});
 }
 
 function trocarAba(aba) { fecharAjuda(false); fecharAnamnese(false); state.abaAtiva=aba; document.querySelectorAll('[data-view]').forEach(function(v){const ativa=v.dataset.view===aba;v.hidden=!ativa;v.classList.toggle('is-active',ativa);}); document.querySelectorAll('[data-tab]').forEach(function(b){b.setAttribute('aria-selected',String(b.dataset.tab===aba));}); if(aba==='questionario')carregarQuestionarioGestor(false); window.scrollTo({top:0,behavior:'auto'}); }
@@ -1124,7 +1126,7 @@ function iniciarApp() {
   inicializarMenusTematizados();
   document.querySelectorAll('[data-help]').forEach(function(botao){botao.setAttribute('aria-controls','helpPopover');});
   document.querySelectorAll('[data-tab]').forEach(function(b){b.addEventListener('click',function(){trocarAba(b.dataset.tab);});});
-  const eventos=[['refreshButton','click',function(){carregarDados(true);}],['searchInput','input',function(e){state.busca=e.target.value;renderizarAcompanhamento();}],['situationFilter','change',function(e){state.situacao=e.target.value;renderizarAcompanhamento();}],['deadlineFilter','change',function(e){state.prazo=e.target.value;renderizarAcompanhamento();}],['professionalFilter','change',function(e){state.profissional=e.target.value;renderizarTudo();}],['periodFilter','change',function(e){state.periodo=e.target.value;renderizarTudo();}],['rankingSort','change',function(e){state.ranking=e.target.value;renderizarProdutividade();}]];
+  const eventos=[['refreshButton','click',function(){carregarDados(true);}],['searchInput','input',function(e){state.busca=e.target.value;renderizarAcompanhamento();}],['situationFilter','change',function(e){state.situacao=e.target.value;renderizarAcompanhamento();}],['deadlineFilter','change',function(e){state.prazo=e.target.value;renderizarAcompanhamento();}],['professionalFilter','change',function(e){state.profissional=e.target.value;carregarDados(false);}],['periodFilter','change',function(e){state.periodo=e.target.value;carregarDados(false);}],['rankingSort','change',function(e){state.ranking=e.target.value;renderizarProdutividade();}]];
   eventos.forEach(function(item){const node=el(item[0]);if(node)node.addEventListener(item[1],item[2]);}); carregarDados(false);
   document.addEventListener('click',function(evento){
     if (!(evento.target.closest && evento.target.closest('.themed-select'))) fecharMenusTematizados(false);

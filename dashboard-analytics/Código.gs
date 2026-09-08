@@ -16,28 +16,52 @@ function dataMenosDiasAnalytics_(dataIso, dias) {
   return data.toISOString().slice(0, 10);
 }
 
-function recalcularDashboardAnalytics_(registrarSnapshot) {
+function normalizarFiltrosDashboardAnalytics_(filtros, fatos, hoje) {
+  filtros = filtros || {};
+  const fim = normalizarDataAnalytics_(hoje) || hojeIsoAnalytics_();
+  const periodoSolicitado = String(filtros.periodo || '30');
+  const periodo = ['7', '30', '90', 'todos'].indexOf(periodoSolicitado) >= 0 ? periodoSolicitado : '30';
+  const profissionais = profissionaisUnicosAnalytics_(fatos);
+  const profissionalSolicitado = normalizarNomeProfissionalAnalytics_(filtros.profissional);
+  const profissional = profissionalSolicitado && profissionais.indexOf(profissionalSolicitado) >= 0
+    ? profissionalSolicitado
+    : 'todos';
+  const datas = (fatos || []).map(function (fato) { return fato.dataEntrada; }).filter(function (data) { return data && data <= fim; }).sort();
+  const inicio = periodo === 'todos'
+    ? (datas[0] || fim)
+    : dataMenosDiasAnalytics_(fim, Number(periodo) - 1);
+  return { periodo: periodo, profissional: profissional, inicio: inicio, fim: fim };
+}
+
+function filtrarFatosDashboardAnalytics_(fatos, filtros) {
+  const profissional = filtros && filtros.profissional;
+  return (fatos || []).filter(function (fato) {
+    return !profissional || profissional === 'todos' || fato.profissional === profissional;
+  });
+}
+
+function recalcularDashboardAnalytics_(registrarSnapshot, filtros) {
   const planilha = obterPlanilhaAnalytics_();
   const validacao = validarFontesAnalytics_(planilha);
   if (!validacao.ok) return { ok: false, error: { code: 'ESTRUTURA_INCOMPATIVEL', message: 'A planilha oficial ainda não está pronta para o dashboard.', details: validacao.erros } };
   const fatos = lerFatosAnalytics_(planilha);
   const historicoAba = garantirHistoricoAnalytics_(planilha);
   if (registrarSnapshot) upsertSnapshotsAnalytics_(historicoAba, montarSnapshotsAnalytics_(fatos, hojeIsoAnalytics_()));
-  const fim = hojeIsoAnalytics_();
-  const payload = montarPayloadDashboardAnalytics_(fatos, lerHistoricoAnalytics_(historicoAba), { inicio: dataMenosDiasAnalytics_(fim, 29), fim: fim, hoje: fim });
+  const filtro = normalizarFiltrosDashboardAnalytics_(filtros, fatos, hojeIsoAnalytics_());
+  const payload = montarPayloadDashboardAnalytics_(filtrarFatosDashboardAnalytics_(fatos, filtro), lerHistoricoAnalytics_(historicoAba), filtro);
+  payload.filtros.profissionais = profissionaisUnicosAnalytics_(fatos);
+  payload.filtros.selecao = { periodo: filtro.periodo, profissional: filtro.profissional };
   payload.ok = true;
-  salvarCacheAnalytics_(payload);
   return payload;
 }
 
-function getDashboardAnalytics() {
-  const cache = obterCacheAnalytics_();
-  return cache || recalcularDashboardAnalytics_(false);
+function getDashboardAnalytics(filtros) {
+  return recalcularDashboardAnalytics_(false, filtros);
 }
 
-function atualizarDashboardAnalytics() {
+function atualizarDashboardAnalytics(filtros) {
   limparCacheAnalytics_();
-  return recalcularDashboardAnalytics_(true);
+  return recalcularDashboardAnalytics_(true, filtros);
 }
 
 function configurarDashboardAnalytics() {

@@ -28,6 +28,19 @@ assert.strictEqual((index.match(/id="helpPopover"/g) || []).length, 1, 'Deve exi
 ));
 assert(scripts.includes('getDashboardAnalytics'));
 assert(scripts.includes('atualizarDashboardAnalytics'));
+assert(scripts.includes('function filtrosDashboard'), 'Os filtros globais devem ser enviados ao backend.');
+assert(
+  /function carregarDados\(forcar\)[\s\S]*chamarServidor\(forcar\?'atualizarDashboardAnalytics':'getDashboardAnalytics',\s*filtrosDashboard\(\)\)/.test(scripts),
+  'A carga deve solicitar ao backend o período e o profissional selecionados.'
+);
+assert(
+  /\['professionalFilter','change',function\(e\)\{state\.profissional=e\.target\.value;carregarDados\(false\);\}\]/.test(scripts),
+  'Trocar o profissional deve recalcular os indicadores.'
+);
+assert(
+  /\['periodFilter','change',function\(e\)\{state\.periodo=e\.target\.value;carregarDados\(false\);\}\]/.test(scripts),
+  'Trocar o período deve recalcular os indicadores.'
+);
 assert(scripts.includes('getAnamneseDashboardAnalytics'));
 assert(scripts.includes('excluirDemandaAnalytics'));
 assert(scripts.includes('data-open-anamnesis'));
